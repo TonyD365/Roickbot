@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'" />
+    <title>Claude for Roblox Studio</title>
+    <style>
+      :root { color-scheme: dark; }
+      body {
+        font-family: -apple-system, "Segoe UI", system-ui, sans-serif;
+        margin: 0; padding: 24px; background: #1e1f22; color: #e6e6e6;
+      }
+      h1 { font-size: 18px; margin: 0 0 4px; }
+      .sub { color: #9aa0a6; font-size: 12px; margin-bottom: 20px; }
+      .card { background: #2b2d31; border-radius: 10px; padding: 16px; margin-bottom: 14px; }
+      .row { display: flex; align-items: center; justify-content: space-between; margin: 8px 0; }
+      .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; margin-right: 8px; }
+      .on { background: #3ba55d; } .off { background: #ed4245; } .idle { background: #faa61a; }
+      button {
+        background: #5865f2; color: #fff; border: none; border-radius: 6px;
+        padding: 8px 14px; font-size: 13px; cursor: pointer;
+      }
+      button.secondary { background: #4e5058; }
+      button:disabled { opacity: 0.5; cursor: default; }
+      .link { background: none; color: #00a8fc; padding: 2px 0; font-size: 12px; text-decoration: underline; }
+      code, .token {
+        font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 11px;
+        background: #1e1f22; padding: 6px 8px; border-radius: 4px; word-break: break-all; display: block;
+      }
+      .label { color: #9aa0a6; font-size: 12px; }
+      .small { font-size: 11px; color: #9aa0a6; margin-top: 4px; }
+      .hidden { display: none; }
+    </style>
+  </head>
+  <body>
+    <h1>Claude for Roblox Studio</h1>
+    <div class="sub">Bridge between Claude Code and Roblox Studio.</div>
+
+    <div class="card">
+      <div class="row">
+        <div><span id="serviceDot" class="dot off"></span><span id="serviceText">Service stopped</span></div>
+        <button id="toggleService">Start service</button>
+      </div>
+      <div class="row">
+        <div><span id="pluginDot" class="dot off"></span><span id="pluginText">Plugin offline</span></div>
+        <button id="installPlugin" class="link">Install plugin</button>
+      </div>
+      <div class="row">
+        <div><span id="claudeDot" class="dot off"></span><span id="claudeText">Claude Code not connected</span></div>
+        <button id="writeConfig" class="secondary">Install MCP config</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="label">Connection token (paste this into the Studio plugin)</div>
+      <div id="token" class="token">—</div>
+      <div class="row" style="margin-top:10px;">
+        <button id="copyToken" class="secondary">Copy token</button>
+        <button id="rotateToken" class="link">Rotate token</button>
+      </div>
+      <div class="small">
+        In Roblox Studio: open the Claude Bridge plugin, paste this token, and click Connect.
+        Make sure HTTP requests are enabled (<code>game:GetService("HttpService").HttpEnabled = true</code>).
+      </div>
+    </div>
+
+    <div id="msg" class="small"></div>
+
+    <script src="renderer.js"></script>
+  </body>
+</html>

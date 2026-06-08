@@ -1,0 +1,38 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build-test:
+    name: Build & test (Node)
+    runs-on: ubuntu-latest
+    env:
+      # The Electron binary is only needed to package installers, not to type-check / test.
+      ELECTRON_SKIP_BINARY_DOWNLOAD: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run build:core
+      - run: npm test
+      - name: End-to-end bridge smoke test
+        run: node smoke.mjs
+
+  plugin:
+    name: Build Studio plugin (Rojo)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ok-nick/setup-aftman@v0.4.2
+      - run: rojo build plugin/default.project.json -o dist/ClaudeBridge.rbxmx
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ClaudeBridge-plugin
+          path: dist/ClaudeBridge.rbxmx
