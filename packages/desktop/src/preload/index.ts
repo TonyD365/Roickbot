@@ -8,16 +8,24 @@ const api = {
   start: () => ipcRenderer.invoke("start-service"),
   stop: () => ipcRenderer.invoke("stop-service"),
   rotateToken: () => ipcRenderer.invoke("rotate-token"),
-  checkConfig: () => ipcRenderer.invoke("check-config"),
   writeConfig: () => ipcRenderer.invoke("write-config"),
   installPlugin: () => ipcRenderer.invoke("install-plugin"),
   openExternal: (url: string) => ipcRenderer.invoke("open-external", url),
+  restartToUpdate: () => ipcRenderer.invoke("restart-to-update"),
   onStatus: (cb: (status: unknown) => void) =>
     ipcRenderer.on("status", (_e, status) => cb(status)),
   onHandshake: (cb: (info: unknown) => void) =>
     ipcRenderer.on("handshake", (_e, info) => cb(info)),
+  onUpdateReady: (cb: (version: string) => void) =>
+    ipcRenderer.on("update-ready", (_e, version) => cb(version)),
 };
 
-contextBridge.exposeInMainWorld("api", api);
+try {
+  contextBridge.exposeInMainWorld("api", api);
+  // 便于在终端确认 preload 注入成功。
+  console.log("[preload] api exposed");
+} catch (e) {
+  console.error("[preload] failed to expose api:", e);
+}
 
 export type DesktopApi = typeof api;

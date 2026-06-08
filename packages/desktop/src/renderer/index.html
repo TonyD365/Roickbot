@@ -2,7 +2,6 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'" />
     <title>Claude for Roblox Studio</title>
     <style>
       :root { color-scheme: dark; }
@@ -30,11 +29,23 @@
       .label { color: #9aa0a6; font-size: 12px; }
       .small { font-size: 11px; color: #9aa0a6; margin-top: 4px; }
       .hidden { display: none; }
+      .banner { background: #3ba55d; color: #fff; border-radius: 8px; padding: 10px 14px; margin-bottom: 14px;
+        display: flex; align-items: center; justify-content: space-between; }
+      .error { background: #ed4245; }
     </style>
   </head>
   <body>
     <h1>Claude for Roblox Studio</h1>
     <div class="sub">Bridge between Claude Code and Roblox Studio.</div>
+
+    <div id="apiError" class="banner error hidden">
+      <span>Failed to initialize (window.api missing). See DevTools console.</span>
+    </div>
+
+    <div id="updateBanner" class="banner hidden">
+      <span id="updateText">An update is ready.</span>
+      <button id="restartUpdate" class="secondary">Restart &amp; update</button>
+    </div>
 
     <div class="card">
       <div class="row">

@@ -16,7 +16,8 @@
     "dist": "npm run build && electron-builder --config electron-builder.yml --publish never"
   },
   "dependencies": {
-    "@claude-roblox/core": "0.1.0"
+    "@claude-roblox/core": "0.1.0",
+    "electron-updater": "^6.3.9"
   },
   "devDependencies": {
     "electron": "31.7.7",
