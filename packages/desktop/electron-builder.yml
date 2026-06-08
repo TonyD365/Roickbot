@@ -6,6 +6,13 @@ copyright: Claude for Roblox Studio
 # 自动推断 electron 版本，故显式指定，避免 "Cannot compute electron version"。
 electronVersion: 31.7.7
 
+# 让 electron-builder 生成自动更新所需的 latest*.yml / app-update.yml。
+# 实际上传由 CI 的 action-gh-release 做（构建时用 --publish never）。
+publish:
+  provider: github
+  owner: TonyD365
+  repo: Claude-for-Roblox-Studio
+
 directories:
   output: release
   buildResources: build

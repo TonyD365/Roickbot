@@ -66,6 +66,8 @@ jobs:
             packages/desktop/release/*.dmg
             packages/desktop/release/*.zip
             packages/desktop/release/*.exe
+            packages/desktop/release/*.yml
+            packages/desktop/release/*.blockmap
 
   release:
     name: Attach artifacts to the release
@@ -89,4 +91,6 @@ jobs:
             artifacts/**/*.exe
             artifacts/**/*.zip
             artifacts/**/*.rbxmx
+            artifacts/**/*.yml
+            artifacts/**/*.blockmap
             artifacts/SHA256SUMS
