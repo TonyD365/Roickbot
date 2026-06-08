@@ -105,7 +105,8 @@ console.table([seq]);
 console.log("Serial throughput:");
 console.table([thr]);
 
-writeFileSync("bench-results.json", JSON.stringify(results, null, 2));
+const outPath = process.env.BENCH_OUT || "bench-results.json";
+writeFileSync(outPath, JSON.stringify(results, null, 2));
 
 const md = `### Bridge benchmark
 
@@ -128,5 +129,5 @@ if (process.env.GITHUB_STEP_SUMMARY) {
   appendFileSync(process.env.GITHUB_STEP_SUMMARY, md);
 }
 
-console.log("\nWrote bench-results.json and bench-summary.md");
+console.log(`\nWrote ${outPath} and bench-summary.md`);
 process.exit(0);
