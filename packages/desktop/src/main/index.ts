@@ -85,12 +85,38 @@ function registerIpc(): void {
   });
   ipcMain.handle("rotate-token", async () => needService().rotateToken());
 
+  // "Install MCP config"：给两个选项 —— ① 自动写入用户配置；② 手动选择文件位置。
   ipcMain.handle("write-config", async () => {
     const s = needService();
     if (!s.isRunning()) await s.start();
-    const userPath = core.userConfigPath();
-    await core.writeMcpConfig(userPath, s.port, s.getToken());
-    return { written: true, path: userPath };
+
+    const choice = await dialog.showMessageBox(win!, {
+      type: "question",
+      buttons: ["Auto-install", "Choose location…", "Cancel"],
+      defaultId: 0,
+      cancelId: 2,
+      message: "Install the Claude Code MCP config",
+      detail:
+        "Auto-install writes the server entry to your user config (~/.claude.json).\n" +
+        "Or choose a specific .mcp.json location (e.g. a project folder).",
+    });
+    if (choice.response === 2) return { written: false, cancelled: true };
+
+    let target: string;
+    if (choice.response === 0) {
+      target = core.userConfigPath();
+    } else {
+      const r = await dialog.showSaveDialog(win!, {
+        title: "Save MCP config",
+        defaultPath: ".mcp.json",
+        filters: [{ name: "MCP config", extensions: ["json"] }],
+      });
+      if (r.canceled || !r.filePath) return { written: false, cancelled: true };
+      target = r.filePath;
+    }
+
+    await core.writeMcpConfig(target, s.port, s.getToken());
+    return { written: true, path: target };
   });
 
   // "Install Plugin"：弹文件保存框，用户自选位置，把内置插件写过去。

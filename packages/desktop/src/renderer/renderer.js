@@ -67,6 +67,7 @@
 
   el("writeConfig").addEventListener("click", guard(async () => {
     const r = await api.writeConfig();
+    if (r.cancelled) { flash("MCP install cancelled"); return; }
     flash(r.written ? `MCP config written to ${r.path}. Restart Claude Code to pick it up.` : "Failed");
     await refresh();
   }));
