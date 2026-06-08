@@ -2,6 +2,10 @@ appId: com.claudeforroblox.studio
 productName: Claude for Roblox Studio
 copyright: Claude for Roblox Studio
 
+# 在 npm workspaces（monorepo）下 electron-builder 无法从被提升的 node_modules
+# 自动推断 electron 版本，故显式指定，避免 "Cannot compute electron version"。
+electronVersion: 31.7.7
+
 directories:
   output: release
   buildResources: build
