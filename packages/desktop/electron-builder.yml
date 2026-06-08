@@ -2,6 +2,10 @@ appId: com.claudeforroblox.studio
 productName: Claude for Roblox Studio
 copyright: Claude for Roblox Studio
 
+# 输出文件名不能带空格：productName 有空格会导致生成名与 GitHub 上传后(空格→点)的
+# 资源名不一致，使 electron-updater 下载更新时 404。用无空格的 artifactName 统一三者。
+artifactName: Claude-for-Roblox-Studio-${version}-${arch}.${ext}
+
 # 在 npm workspaces（monorepo）下 electron-builder 无法从被提升的 node_modules
 # 自动推断 electron 版本，故显式指定，避免 "Cannot compute electron version"。
 electronVersion: 31.7.7

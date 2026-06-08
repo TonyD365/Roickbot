@@ -25,6 +25,11 @@ let service: any;
 /** 调试开关：打包后默认关闭 DevTools；设 CLAUDE_RBX_DEBUG=1 可强制打开。 */
 const DEBUG = process.env.CLAUDE_RBX_DEBUG === "1" || !app.isPackaged;
 
+// 兜底：electron-updater 内部下载失败等会抛出未捕获的 Promise 拒绝，记录而非让它变成警告噪音。
+process.on("unhandledRejection", (reason) => {
+  console.error("[main] unhandledRejection:", reason instanceof Error ? reason.message : reason);
+});
+
 /** 预编译插件 .rbxmx 的位置（打包后在 resources/，开发时在仓库 dist/）。 */
 function pluginArtifactPath(): string {
   if (app.isPackaged) return join(process.resourcesPath, "ClaudeBridge.rbxmx");
