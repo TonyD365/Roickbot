@@ -128,7 +128,8 @@ function startAutoUpdate(): void {
       console.log("[updater] downloaded:", info.version);
       win?.webContents.send("update-ready", info.version);
     });
-    void autoUpdater.checkForUpdates();
+    // .catch 避免未处理的 Promise 拒绝（例如仓库私有/无网络时的 404）。
+    autoUpdater.checkForUpdates().catch((e) => console.error("[updater] check failed:", e?.message ?? e));
   } catch (e) {
     console.error("[updater] failed to start:", e);
   }

@@ -1,48 +1,49 @@
 // Renderer logic (plain JS, talks to main via the preload `api`).
+// Wrapped in an IIFE so top-level identifiers can never collide / be
+// "already declared" even if this script is evaluated more than once.
 /* global window, document */
-const el = (id) => document.getElementById(id);
+(() => {
+  const el = (id) => document.getElementById(id);
 
-function flash(message) {
-  el("msg").textContent = message;
-  if (message) setTimeout(() => { el("msg").textContent = ""; }, 4000);
-}
+  function flash(message) {
+    el("msg").textContent = message;
+    if (message) setTimeout(() => { el("msg").textContent = ""; }, 4000);
+  }
 
-const api = window.api;
+  const api = window.api;
 
-// 如果 preload 没注入成功，明确提示，而不是静默失效。
-if (!api) {
-  const b = el("apiError");
-  if (b) b.classList.remove("hidden");
-  console.error("window.api is undefined — preload did not load.");
-} else {
-  setupHandlers(api);
-}
+  // 如果 preload 没注入成功，明确提示，而不是静默失效。
+  if (!api) {
+    const b = el("apiError");
+    if (b) b.classList.remove("hidden");
+    console.error("window.api is undefined — preload did not load.");
+    return;
+  }
 
-function setIndicator(dotId, textId, state, text) {
-  const dot = el(dotId);
-  dot.classList.remove("on", "off", "idle");
-  dot.classList.add(state);
-  el(textId).textContent = text;
-}
+  let running = false;
 
-let running = false;
+  function setIndicator(dotId, textId, state, text) {
+    const dot = el(dotId);
+    dot.classList.remove("on", "off", "idle");
+    dot.classList.add(state);
+    el(textId).textContent = text;
+  }
 
-function render(status) {
-  if (!status) return;
-  running = status.running;
-  setIndicator("serviceDot", "serviceText", running ? "on" : "off",
-    running ? `Service running on port ${status.port}` : "Service stopped");
-  el("toggleService").textContent = running ? "Stop service" : "Start service";
+  function render(status) {
+    if (!status) return;
+    running = status.running;
+    setIndicator("serviceDot", "serviceText", running ? "on" : "off",
+      running ? `Service running on port ${status.port}` : "Service stopped");
+    el("toggleService").textContent = running ? "Stop service" : "Start service";
 
-  setIndicator("pluginDot", "pluginText", status.pluginConnected ? "on" : "off",
-    status.pluginConnected ? "Plugin online (auto-connected)" : "Plugin offline");
-  el("installPlugin").classList.toggle("hidden", status.pluginConnected);
+    setIndicator("pluginDot", "pluginText", status.pluginConnected ? "on" : "off",
+      status.pluginConnected ? "Plugin online (auto-connected)" : "Plugin offline");
+    el("installPlugin").classList.toggle("hidden", status.pluginConnected);
 
-  setIndicator("claudeDot", "claudeText", status.claudeConnected ? "on" : "idle",
-    status.claudeConnected ? "Claude Code connected" : "Claude Code not connected");
-}
+    setIndicator("claudeDot", "claudeText", status.claudeConnected ? "on" : "idle",
+      status.claudeConnected ? "Claude Code connected" : "Claude Code not connected");
+  }
 
-function setupHandlers(api) {
   // 统一包一层 try/catch，任何错误都弹到界面上，避免"点了没反应"。
   const guard = (fn) => async () => {
     try { await fn(); } catch (e) { flash("Error: " + (e && e.message ? e.message : String(e))); console.error(e); }
@@ -92,4 +93,4 @@ function setupHandlers(api) {
 
   setInterval(refresh, 2500);
   refresh();
-}
+})();
