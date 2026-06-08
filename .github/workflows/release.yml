@@ -56,6 +56,13 @@ jobs:
       - run: npm ci
       - run: npm run build:core
       - run: npm run build:desktop
+      # 把 app 版本号设成 tag（去掉前导 v），让安装包/latest.yml 版本与发布一致，自动更新才能生效。
+      - name: Set app version from tag
+        shell: bash
+        run: |
+          VER="${{ github.event.inputs.tag || github.ref_name }}"
+          VER="${VER#v}"
+          node -e "const fs=require('fs');const f='packages/desktop/package.json';const p=JSON.parse(fs.readFileSync(f));p.version='$VER';fs.writeFileSync(f,JSON.stringify(p,null,2)+'\n');console.log('app version set to '+p.version)"
       # electron-builder 只负责构建，不发布（发布由下方 action-gh-release 做）。
       - name: Package installers (arm64 + x64)
         run: npm run dist --workspace packages/desktop
@@ -66,7 +73,7 @@ jobs:
             packages/desktop/release/*.dmg
             packages/desktop/release/*.zip
             packages/desktop/release/*.exe
-            packages/desktop/release/*.yml
+            packages/desktop/release/latest*.yml
             packages/desktop/release/*.blockmap
 
   release:
@@ -91,6 +98,6 @@ jobs:
             artifacts/**/*.exe
             artifacts/**/*.zip
             artifacts/**/*.rbxmx
-            artifacts/**/*.yml
+            artifacts/**/latest*.yml
             artifacts/**/*.blockmap
             artifacts/SHA256SUMS
