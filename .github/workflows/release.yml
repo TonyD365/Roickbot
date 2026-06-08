@@ -20,7 +20,7 @@ jobs:
           chmod +x rojo
           sudo mv rojo /usr/local/bin/rojo
           rojo --version
-      - run: rojo build plugin/default.project.json -o dist/ClaudeBridge.rbxmx
+      - run: mkdir -p dist && rojo build plugin/default.project.json -o dist/ClaudeBridge.rbxmx
       - uses: actions/upload-artifact@v4
         with:
           name: ClaudeBridge-plugin
