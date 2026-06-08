@@ -6,6 +6,10 @@ on:
   pull_request:
   workflow_dispatch:
 
+permissions:
+  contents: read
+  pull-requests: write
+
 jobs:
   benchmark:
     name: Bridge benchmark
@@ -22,7 +26,15 @@ jobs:
       - run: npm run build:core
       - name: Run bridge benchmark
         run: node bench.mjs
+      - name: Post results as a PR comment
+        if: github.event_name == 'pull_request'
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          header: bridge-benchmark
+          path: bench-summary.md
       - uses: actions/upload-artifact@v4
         with:
           name: bench-results
-          path: bench-results.json
+          path: |
+            bench-results.json
+            bench-summary.md

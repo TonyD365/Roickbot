@@ -107,8 +107,7 @@ console.table([thr]);
 
 writeFileSync("bench-results.json", JSON.stringify(results, null, 2));
 
-if (process.env.GITHUB_STEP_SUMMARY) {
-  const md = `### Bridge benchmark
+const md = `### Bridge benchmark
 
 Command hot path: \`dispatch → queue → plugin poll (HTTP) → response (HTTP) → resolve\`, with a simulated plugin (no Roblox Studio).
 
@@ -122,8 +121,12 @@ Command hot path: \`dispatch → queue → plugin poll (HTTP) → response (HTTP
 
 _Node ${results.node}. Measures the local bridge only; a real Studio plugin adds DataModel + network time._
 `;
+
+// 写到文件供 PR 评论使用，并（在 CI 中）追加到 job summary。
+writeFileSync("bench-summary.md", md);
+if (process.env.GITHUB_STEP_SUMMARY) {
   appendFileSync(process.env.GITHUB_STEP_SUMMARY, md);
 }
 
-console.log("\nWrote bench-results.json");
+console.log("\nWrote bench-results.json and bench-summary.md");
 process.exit(0);

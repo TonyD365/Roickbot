@@ -13,6 +13,7 @@ release/
 
 # Generated benchmark output
 bench-results.json
+bench-summary.md
 
 # Packaged plugin artifact (built from plugin/src)
 ClaudeBridge.rbxmx
