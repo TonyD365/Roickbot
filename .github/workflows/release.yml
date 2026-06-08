@@ -3,6 +3,14 @@ name: Release
 on:
   push:
     tags: ["v*"]
+  # Manual trigger so a build can be (re)run from a branch and attached to an
+  # existing release without having to delete/recreate the tag.
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing tag/release to attach the built artifacts to"
+        required: true
+        default: v0.1.0
 
 permissions:
   contents: write
@@ -48,10 +56,9 @@ jobs:
       - run: npm ci
       - run: npm run build:core
       - run: npm run build:desktop
+      # electron-builder 只负责构建，不发布（发布由下方 action-gh-release 做）。
       - name: Package installers (arm64 + x64)
         run: npm run dist --workspace packages/desktop
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - uses: actions/upload-artifact@v4
         with:
           name: installers-${{ matrix.os }}
@@ -61,12 +68,10 @@ jobs:
             packages/desktop/release/*.exe
 
   release:
-    name: Create GitHub Release
+    name: Attach artifacts to the release
     needs: [plugin, desktop]
     runs-on: ubuntu-latest
     steps:
-      # Checkout so the release notes file (RELEASE_NOTES.md) is available.
-      - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
         with:
           path: artifacts
@@ -75,10 +80,10 @@ jobs:
           cd artifacts
           find . -type f \( -name '*.dmg' -o -name '*.exe' -o -name '*.zip' -o -name '*.rbxmx' \) -exec sha256sum {} \; > SHA256SUMS
           cat SHA256SUMS
+      # Only upload files; do NOT touch the release title or body (the maintainer writes those).
       - uses: softprops/action-gh-release@v2
         with:
-          name: Claude for Roblox Studio ${{ github.ref_name }}
-          body_path: RELEASE_NOTES.md
+          tag_name: ${{ github.event.inputs.tag || github.ref_name }}
           files: |
             artifacts/**/*.dmg
             artifacts/**/*.exe
