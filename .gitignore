@@ -11,5 +11,8 @@ release/
 .roblox-mcp/
 *.token
 
+# Generated benchmark output
+bench-results.json
+
 # Packaged plugin artifact (built from plugin/src)
 ClaudeBridge.rbxmx
