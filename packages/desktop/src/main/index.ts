@@ -4,9 +4,8 @@
 import { app, BrowserWindow, ipcMain, dialog, shell } from "electron";
 import { join } from "node:path";
 import { copyFile } from "node:fs/promises";
-import electronUpdater from "electron-updater";
-
-const { autoUpdater } = electronUpdater;
+// electron-updater 是 CommonJS 具名导出，必须具名导入（它没有 default 导出）。
+import { autoUpdater } from "electron-updater";
 
 // core 是 ESM-only 包，从 CommonJS 主进程通过动态 import 加载，故这里用宽松类型。
 interface CoreStatus {
