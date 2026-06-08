@@ -26,6 +26,24 @@ jobs:
       - name: End-to-end bridge smoke test
         run: node smoke.mjs
 
+  desktop-smoke:
+    name: Desktop app launch smoke
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      # Headless display for Electron; the Electron binary downloads during npm ci (no SKIP here).
+      - name: Install xvfb
+        run: sudo apt-get update && sudo apt-get install -y xvfb
+      - run: npm ci
+      - run: npm run build:core
+      - run: npm run build:desktop
+      - name: Launch app headlessly and check for fatal errors
+        run: npm run smoke --workspace packages/desktop
+
   plugin:
     name: Build Studio plugin (Rojo)
     runs-on: ubuntu-latest
