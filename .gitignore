@@ -1,0 +1,15 @@
+node_modules/
+dist/
+out/
+build/
+release/
+*.log
+.DS_Store
+*.tsbuildinfo
+
+# Local secrets / runtime state
+.roblox-mcp/
+*.token
+
+# Packaged plugin artifact (built from plugin/src)
+ClaudeBridge.rbxmx

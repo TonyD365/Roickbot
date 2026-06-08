@@ -1,0 +1,45 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build-test:
+    name: Build & test (Node)
+    runs-on: ubuntu-latest
+    env:
+      # The Electron binary is only needed to package installers, not to type-check / test.
+      ELECTRON_SKIP_BINARY_DOWNLOAD: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      # core must be built first so its dist/*.d.ts exist before the desktop package type-checks.
+      - run: npm run build:core
+      - run: npm run typecheck
+      - run: npm test
+      - name: End-to-end bridge smoke test
+        run: node smoke.mjs
+
+  plugin:
+    name: Build Studio plugin (Rojo)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Rojo
+        run: |
+          curl -sSL -o rojo.zip https://github.com/rojo-rbx/rojo/releases/download/v7.4.4/rojo-7.4.4-linux-x86_64.zip
+          unzip -o rojo.zip rojo
+          chmod +x rojo
+          sudo mv rojo /usr/local/bin/rojo
+          rojo --version
+      - run: mkdir -p dist && rojo build plugin/default.project.json -o dist/ClaudeBridge.rbxmx
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ClaudeBridge-plugin
+          path: dist/ClaudeBridge.rbxmx
