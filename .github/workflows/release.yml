@@ -65,6 +65,8 @@ jobs:
     needs: [plugin, desktop]
     runs-on: ubuntu-latest
     steps:
+      # Checkout so the release notes file (RELEASE_NOTES.md) is available.
+      - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
         with:
           path: artifacts
@@ -75,7 +77,8 @@ jobs:
           cat SHA256SUMS
       - uses: softprops/action-gh-release@v2
         with:
-          generate_release_notes: true
+          name: Claude for Roblox Studio ${{ github.ref_name }}
+          body_path: RELEASE_NOTES.md
           files: |
             artifacts/**/*.dmg
             artifacts/**/*.exe
