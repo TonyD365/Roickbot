@@ -194,8 +194,9 @@ function startAutoUpdate(): void {
     // Windows 走 electron-updater 全自动下载 + 重启安装。
     autoUpdater.autoDownload = !isMac;
     autoUpdater.autoInstallOnAppQuit = !isMac;
-    // 现在的 Release 标记为 pre-release，需允许更新器识别预发布版本。
-    autoUpdater.allowPrerelease = true;
+    // 只更新到最新的“正式版”(GitHub 的 Latest release，非 pre-release)。
+    // 这样发 pre-release 测试版不会打扰用户；只有把正式 Latest 升到新版本才提示更新。
+    autoUpdater.allowPrerelease = false;
     autoUpdater.on("error", (err) => console.error("[updater] error:", err));
     autoUpdater.on("checking-for-update", () => console.log("[updater] checking for updates..."));
     autoUpdater.on("update-not-available", () => console.log("[updater] already up to date"));
