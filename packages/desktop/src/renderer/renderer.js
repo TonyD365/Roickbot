@@ -85,11 +85,25 @@
 
   el("restartUpdate").addEventListener("click", guard(() => api.restartToUpdate()));
 
+  // macOS（未签名）：下载 dmg 到桌面并打开，用户手动拖入 Applications。
+  let manualUrl = null;
+  el("downloadUpdate").addEventListener("click", guard(async () => {
+    if (!manualUrl) return;
+    flash("Downloading update… this can take a minute.");
+    const r = await api.downloadUpdate(manualUrl);
+    flash(`Saved to ${r.path} and opened it. Drag the app into Applications, then reopen.`);
+  }));
+
   api.onStatus((status) => render(status));
   api.onHandshake(() => { flash("Studio plugin connected."); refresh(); });
   api.onUpdateReady((version) => {
     el("updateText").textContent = `Update ${version} downloaded.`;
     el("updateBanner").classList.remove("hidden");
+  });
+  api.onUpdateManual(({ version, url }) => {
+    manualUrl = url;
+    el("manualUpdateText").textContent = `Update ${version} available — download & drag into Applications.`;
+    el("manualUpdateBanner").classList.remove("hidden");
   });
 
   setInterval(refresh, 2500);
