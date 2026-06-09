@@ -77,6 +77,16 @@ check("tools/list includes set_lighting (Phase 2)", listText.includes("set_light
 check("tools/list includes build_gui (Phase 2)", listText.includes("build_gui"));
 check("tools/list includes bot_spawn (Phase 3)", listText.includes("bot_spawn"));
 check("tools/list includes bot_see (Phase 3)", listText.includes("bot_see"));
+check("tools/list includes edit_script_lines", listText.includes("edit_script_lines"));
+check("tools/list includes find_instances", listText.includes("find_instances"));
+check("tools/list includes search_by_property", listText.includes("search_by_property"));
+check("tools/list includes get_tagged", listText.includes("get_tagged"));
+check("tools/list includes add_tag", listText.includes("add_tag"));
+check("tools/list includes search_scripts", listText.includes("search_scripts"));
+check("tools/list includes get_script_info", listText.includes("get_script_info"));
+check("tools/list includes harness_init", listText.includes("harness_init"));
+check("tools/list includes harness_session_start", listText.includes("harness_session_start"));
+check("tools/list includes harness_feature_update", listText.includes("harness_feature_update"));
 
 // 8. 完整命令往返：MCP tools/call -> 队列 -> 模拟插件长轮询 -> 回传结果。
 let pluginRunning = true;
@@ -109,6 +119,20 @@ check("tool round-trip routes through the plugin and returns its result",
 
 pluginRunning = false;
 await Promise.race([fakePlugin, new Promise((res) => setTimeout(res, 500))]);
+
+// 9. Harness 工具在 core 本地处理（不经插件）：增一个 feature 再读 status。
+async function callTool(id, name, args) {
+  const rr = await fetch(`${base}/mcp`, {
+    method: "POST",
+    headers: { ...authHeaders, Accept: "application/json, text/event-stream", "mcp-session-id": sessionId ?? "" },
+    body: JSON.stringify({ jsonrpc: "2.0", id, method: "tools/call", params: { name, arguments: args } }),
+  });
+  return rr.text();
+}
+const featText = await callTool(10, "harness_feature_update", { title: "Smoke feature", priority: "high" });
+check("harness_feature_update creates a feature locally", featText.includes("Smoke feature") && featText.includes("F1"));
+const statusText = await callTool(11, "harness_status", {});
+check("harness_status reflects the new feature", statusText.includes("Smoke feature"));
 
 await svc.stop();
 console.log(`\n${pass} passed, ${fail} failed`);

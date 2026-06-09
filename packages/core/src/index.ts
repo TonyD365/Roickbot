@@ -1,11 +1,12 @@
 // 核心服务入口：把队列、鉴权、确认、HTTP 桥组装成一个可启停的 CoreService。
 // 桌面 App 主进程直接引用本模块来启停服务。
 
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { EventEmitter } from "node:events";
 import { CommandQueue } from "./bridge/commandQueue.js";
 import { ConfirmStore } from "./safety/confirm.js";
 import { BridgeServer } from "./bridge/httpServer.js";
+import { Harness } from "./harness/harness.js";
 import { loadOrCreateToken, generateToken } from "./security/auth.js";
 import type { HandshakeInfo } from "./bridge/envelope.js";
 
@@ -15,6 +16,8 @@ export interface CoreServiceOptions {
   port?: number;
   /** token 持久化文件路径。 */
   tokenPath?: string;
+  /** harness 项目记忆 JSON 文件路径（默认与 token 同目录）。 */
+  harnessPath?: string;
 }
 
 export interface CoreStatus {
@@ -35,6 +38,7 @@ export interface CoreStatus {
 export class CoreService extends EventEmitter {
   readonly port: number;
   private readonly tokenPath: string;
+  private readonly harness: Harness;
   private token = "";
   private queue: CommandQueue | null = null;
   private confirm: ConfirmStore | null = null;
@@ -45,6 +49,7 @@ export class CoreService extends EventEmitter {
     super();
     this.port = opts.port ?? (Number(process.env.CLAUDE_ROBLOX_PORT) || DEFAULT_PORT);
     this.tokenPath = opts.tokenPath ?? join(process.cwd(), ".roblox-mcp", "token");
+    this.harness = new Harness(opts.harnessPath ?? join(dirname(this.tokenPath), "harness.json"));
   }
 
   getToken(): string {
@@ -76,6 +81,7 @@ export class CoreService extends EventEmitter {
       token: this.token,
       queue: this.queue,
       confirm: this.confirm,
+      harness: this.harness,
       onHandshake: (info: HandshakeInfo) => {
         this.emit("handshake", info);
         this.emit("status", this.getStatus());
@@ -116,3 +122,4 @@ export { BridgeServer } from "./bridge/httpServer.js";
 export * from "./security/auth.js";
 export * from "./config/mcpConfig.js";
 export * from "./bridge/envelope.js";
+export { Harness } from "./harness/harness.js";

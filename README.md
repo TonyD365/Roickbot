@@ -142,6 +142,17 @@ npm start --workspace packages/desktop
 `bot_state`, `bot_see`. While a test is running, project-editing tools are locked (`RUNTIME_LOCKED`) —
 the run phase is read-only; reads, `bot_*`, `run_luau` and `get_console_output` stay available.
 
+**Search, tags & surgical edits:** `edit_script_lines` (line-range edits), `find_instances`,
+`search_by_property`, `search_scripts` (grep all script source) and `get_script_info` (inspect a
+script "file" — class/lines/`Disabled`/`RunContext`/attributes), plus `get_tagged` / `get_tags` /
+`add_tag` / `remove_tag`. `search_scripts` and `get_script_info` are read-only, so they work **while
+the game is running** — built for debugging a live play-test.
+
+**Project harness (cross-session memory):** `harness_init`, `harness_session_start`,
+`harness_session_end`, `harness_status`, `harness_feature_update` — a persistent project memory
+(metadata + features + session handoffs) handled locally by the app, so the AI remembers the project
+across sessions even with Studio offline.
+
 **Universal:** `run_luau`.
 
 All mutating tools accept `dryRun: true` to preview without applying. There are **no artificial size
@@ -342,6 +353,15 @@ npm start --workspace packages/desktop
 **第三阶段（Bot 视觉 + 自我测试）：** `bot_spawn`、`bot_despawn`、`bot_move`、`bot_look`、
 `bot_state`、`bot_see`。游戏运行时,工程编辑类工具被锁(`RUNTIME_LOCKED`)——运行态只读;读取、
 `bot_*`、`run_luau`、`get_console_output` 仍可用。
+
+**搜索 / 标签 / 行级编辑：** `edit_script_lines`（按行区间改脚本）、`find_instances`、
+`search_by_property`、`search_scripts`（grep 所有脚本源码）、`get_script_info`（查看脚本"文件"属性——
+类名/行数/`Disabled`/`RunContext`/属性），以及 `get_tagged` / `get_tags` / `add_tag` / `remove_tag`。
+其中 `search_scripts` 与 `get_script_info` 是只读的，**游戏运行时也能用** —— 专为调试运行中的测试而设。
+
+**项目 harness（跨 session 记忆）：** `harness_init`、`harness_session_start`、`harness_session_end`、
+`harness_status`、`harness_feature_update` —— 由应用本地维护的项目记忆（元信息 + features + session 交接），
+让 AI 跨 session 记住项目进度，即使 Studio 没连也能用。
 
 **万能：** `run_luau`。
 
