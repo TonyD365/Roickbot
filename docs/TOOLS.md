@@ -26,12 +26,17 @@ optional).
 
 | Tool | Purpose |
 | --- | --- |
-| `run_simulation` / `stop_simulation` / `pause_simulation` | `RunService:Run/Stop/Pause` — physics simulation (no local player). |
+| `start_test` / `stop_test` / `pause_test` | Start/stop/pause a play-test via `RunService:Run/Stop/Pause` (Run mode — physics live, no avatar; drive a Bot as the player). |
 | `get_run_state` | Edit / Running / Paused. |
 | `get_console_output` | Recent Studio Output (prints/warnings/errors) via `LogService`; `count` + `includeTypes` filters. |
 
-> Full Play mode (F5, with a player character) has no clean plugin API, so use Run + a Bot
-> (Phase 3) instead.
+> Full Play mode (F5, with a player character) has no clean plugin API, so `start_test` uses Run
+> mode + a Bot (Phase 3) as the player.
+>
+> **Runtime lock:** while a test is running, all project-**editing** tools are blocked with
+> `RUNTIME_LOCKED` (the run phase is read-only). Allowed while running: all reads,
+> `get_console_output`, `start_test`/`stop_test`/`pause_test`, `run_luau`, and all `bot_*`. Call
+> `stop_test` before editing again.
 
 ## Universal escape hatch
 
@@ -62,7 +67,22 @@ optional).
 
 All accept `dryRun` and obey the same path allow/deny list.
 
-## Planned
+## Phase 3 — Bot vision & self-test loop
 
-- **Phase 3 (Bot vision)**: `bot_spawn/despawn/move/look/state`, `bot_see` (structured
-  raycast-based perception).
+| Tool | Purpose |
+| --- | --- |
+| `bot_spawn` | Spawn a controllable "ClaudeBot" rig in Workspace to act as the player (`rig: humanoid` walkable, or `part` sensor). |
+| `bot_despawn` | Remove the Bot (destructive → preview + confirm token). |
+| `bot_move` | Walk to `to` (Humanoid:MoveTo while running), `by` (relative), or `teleport`. |
+| `bot_look` | Aim the Bot's view (`lookAt` / `yawDeg` / `pitchDeg`) — used by `bot_see`. |
+| `bot_state` | Bot position, look direction, pitch, humanoid state. |
+| `bot_see` | Structured perception: ray fan over the FOV + nearby query → visible objects (name/class/position/color/material/distance) + nearby list + summary. Not pixels. |
+
+Bot tools are **not** blocked by the runtime lock (they're how you test).
+
+### Self-test loop (AI-orchestrated)
+
+```
+bot_spawn → start_test → (bot_move / bot_look / bot_see + get_console_output, repeat) → diagnose
+→ stop_test → edit the project → start_test again … until it passes
+```
