@@ -263,6 +263,25 @@ export function registerPhase1Tools(server: McpServer, ctx: ToolContext): void {
     async () => forward(ctx, "get_run_state", {}),
   );
 
+  // ---- 控制台 / 输出 ----
+  server.registerTool(
+    "get_console_output",
+    {
+      title: "Get console / output log",
+      description:
+        "Return recent Studio Output messages (prints, info, warnings, errors) from LogService. " +
+        "Use after run_luau or after running the game to see what was logged and to debug errors.",
+      inputSchema: {
+        count: z.number().int().min(1).optional().describe("Max recent messages to return (default 100)."),
+        includeTypes: z
+          .array(z.enum(["Output", "Info", "Warning", "Error"]))
+          .optional()
+          .describe("Only include these message types, e.g. [\"Warning\",\"Error\"]."),
+      },
+    },
+    async (args) => forward(ctx, "get_console_output", args),
+  );
+
   // ---- 万能逃生舱 ----
   server.registerTool(
     "run_luau",

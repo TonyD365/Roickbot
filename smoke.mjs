@@ -71,6 +71,7 @@ check("tools/list includes create_instance", listText.includes("create_instance"
 check("tools/list includes view_elements", listText.includes("view_elements"));
 check("tools/list includes run_simulation", listText.includes("run_simulation"));
 check("tools/list includes run_luau", listText.includes("run_luau"));
+check("tools/list includes get_console_output", listText.includes("get_console_output"));
 check("tools/list includes build_parts (Phase 2)", listText.includes("build_parts"));
 check("tools/list includes set_lighting (Phase 2)", listText.includes("set_lighting"));
 check("tools/list includes build_gui (Phase 2)", listText.includes("build_gui"));

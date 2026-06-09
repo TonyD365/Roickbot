@@ -28,6 +28,7 @@ optional).
 | --- | --- |
 | `run_simulation` / `stop_simulation` / `pause_simulation` | `RunService:Run/Stop/Pause` — physics simulation (no local player). |
 | `get_run_state` | Edit / Running / Paused. |
+| `get_console_output` | Recent Studio Output (prints/warnings/errors) via `LogService`; `count` + `includeTypes` filters. |
 
 > Full Play mode (F5, with a player character) has no clean plugin API, so use Run + a Bot
 > (Phase 3) instead.

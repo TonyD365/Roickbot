@@ -10,6 +10,7 @@ local selection = require(script.Parent.handlers.selection)
 local run = require(script.Parent.handlers.run)
 local runLuau = require(script.Parent.handlers.runLuau)
 local graphics = require(script.Parent.handlers.graphics)
+local console = require(script.Parent.handlers.console)
 
 local Dispatcher = {}
 
@@ -23,6 +24,7 @@ local handlers: { [string]: (any, any) -> any } = {
 	get_script_source = scripts.get_script_source,
 	get_selection = selection.get_selection,
 	get_run_state = run.get_run_state,
+	get_console_output = console.get_console_output,
 	-- 变更
 	set_properties = properties.set_properties,
 	create_instance = instances.create_instance,
