@@ -64,7 +64,16 @@
       </div>
       <div class="row">
         <div><span id="claudeDot" class="dot off"></span><span id="claudeText">Claude Code not connected</span></div>
-        <button id="writeConfig" class="secondary">Install MCP config</button>
+        <div style="display:flex;gap:6px;align-items:center;">
+          <select id="clientSelect" class="secondary" title="Choose your AI client">
+            <option value="claude">Claude Code</option>
+            <option value="cursor">Cursor</option>
+            <option value="gemini">Gemini CLI</option>
+            <option value="cline">Cline</option>
+            <option value="vscode">VS Code</option>
+          </select>
+          <button id="writeConfig" class="secondary">Install MCP config</button>
+        </div>
       </div>
     </div>
 
