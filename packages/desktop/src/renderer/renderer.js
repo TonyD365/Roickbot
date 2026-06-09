@@ -117,6 +117,11 @@
   setInterval(refresh, 2500);
   refresh();
 
+  // 自检：确认 .hidden 真的把元素隐藏了（防 CSS 优先级回归——横幅误显示）。
+  if (getComputedStyle(el("updateBanner")).display !== "none") {
+    console.error("[renderer] CSS bug: .hidden class is not hiding elements");
+  }
+
   // 成功标志：renderer 完整初始化且确实拿到了 window.api（供自检确认）。
   console.log("[renderer] ui ready");
 })();

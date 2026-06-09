@@ -28,7 +28,8 @@
       }
       .label { color: #9aa0a6; font-size: 12px; }
       .small { font-size: 11px; color: #9aa0a6; margin-top: 4px; }
-      .hidden { display: none; }
+      /* !important：否则 .banner 的 display:flex 因定义在后会压过 .hidden，导致横幅永远显示。 */
+      .hidden { display: none !important; }
       .banner { background: #3ba55d; color: #fff; border-radius: 8px; padding: 10px 14px; margin-bottom: 14px;
         display: flex; align-items: center; justify-content: space-between; }
       .error { background: #ed4245; }
