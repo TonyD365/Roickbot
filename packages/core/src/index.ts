@@ -22,6 +22,8 @@ export interface CoreStatus {
   port: number;
   pluginConnected: boolean;
   claudeConnected: boolean;
+  /** 连上来的 MCP 客户端名（如 "claude-code" / "gemini-cli" / "cursor"），未知则 null。 */
+  mcpClient: string | null;
   queueDepth: number;
 }
 
@@ -59,6 +61,7 @@ export class CoreService extends EventEmitter {
       port: this.port,
       pluginConnected: this.queue?.isPluginConnected() ?? false,
       claudeConnected: this.bridge?.mcpActiveRecently() ?? false,
+      mcpClient: this.bridge?.getMcpClient()?.name ?? null,
       queueDepth: this.queue?.queueDepth ?? 0,
     };
   }

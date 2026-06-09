@@ -17,6 +17,7 @@ interface CoreStatus {
   port: number;
   pluginConnected: boolean;
   claudeConnected: boolean;
+  mcpClient: string | null;
   queueDepth: number;
 }
 

@@ -8,7 +8,8 @@
 [![Last commit](https://img.shields.io/github/last-commit/TonyD365/Claude-for-Roblox-Studio)](https://github.com/TonyD365/Claude-for-Roblox-Studio/commits)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-A desktop app + MCP server that lets **Claude / Claude Code** control **Roblox Studio**. Claude can
+A desktop app + MCP server that lets **Claude Code — and any other MCP client (Gemini, Cursor,
+VS Code, …)** — control **Roblox Studio**. Your AI can
 read and edit scripts, inspect and modify the scene and models, run the simulation, and — in later
 phases — build graphics and drive an in-game **Bot** that reports what it "sees" as structured data,
 all through natural language from your editor.
@@ -31,6 +32,7 @@ all through natural language from your editor.
 - [Installation (end user)](#installation-end-user)
 - [Development](#development)
 - [Available tools](#available-tools)
+- [Use with other AI clients](#use-with-other-ai-clients)
 - [Security](#security)
 - ["Think before acting"](#think-before-acting-三思而后行)
 - [Roadmap](#roadmap)
@@ -52,6 +54,8 @@ all through natural language from your editor.
   validation, and a required custom header to defend against malicious web pages.
 - **One-click setup** — a desktop app starts the service, shows the pairing token, installs the
   plugin, and writes the Claude Code MCP config for you.
+- **Works with any MCP client** — not just Claude: Gemini, Cursor, VS Code/Copilot, Cline, etc.
+  (incl. free options). See [docs/CLIENTS.md](docs/CLIENTS.md).
 - **Cross-platform releases** — CI packages installers for Windows and macOS (arm64 + x64).
 
 ## How it works
@@ -140,6 +144,28 @@ All mutating tools accept `dryRun: true` to preview without applying. There are 
 limits** — use `maxDepth` / `get_children` / `view_elements` filters to control payload size on
 large projects. Full reference: [docs/TOOLS.md](docs/TOOLS.md).
 
+## Use with other AI clients
+
+It's a standard MCP server, so it works with any client that supports remote (HTTP) MCP servers
+with custom headers — **not just Claude**. Point the client at `http://127.0.0.1:7331/mcp` with the
+`Authorization: Bearer <token>` and `X-Roblox-MCP: 1` headers (the token is shown in the app).
+
+**Google Gemini (free tier)** — add to `~/.gemini/settings.json`:
+
+```json
+{
+  "mcpServers": {
+    "roblox-studio": {
+      "httpUrl": "http://127.0.0.1:7331/mcp",
+      "headers": { "Authorization": "Bearer PASTE_TOKEN", "X-Roblox-MCP": "1" }
+    }
+  }
+}
+```
+
+Cursor, VS Code/Copilot, Cline + local Ollama (free), and other clients are covered — including
+**free model options** — in **[docs/CLIENTS.md](docs/CLIENTS.md)**.
+
 ## Security
 
 The bridge runs on your machine, so **any web page you open could try to reach `127.0.0.1`**. The
@@ -190,7 +216,8 @@ MIT
 [![Last commit](https://img.shields.io/github/last-commit/TonyD365/Claude-for-Roblox-Studio)](https://github.com/TonyD365/Claude-for-Roblox-Studio/commits)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-一个桌面应用 + MCP 服务器，让 **Claude / Claude Code** 直接操控 **Roblox Studio**。Claude 可以读写脚本、
+一个桌面应用 + MCP 服务器，让 **Claude Code —— 以及任何其它 MCP 客户端（Gemini、Cursor、VS Code…）**
+直接操控 **Roblox Studio**。你的 AI 可以读写脚本、
 查看和修改场景与模型、运行仿真，并在后续阶段构建图形、驱动一个游戏内 **Bot** 并以结构化数据的形式"看到"
 世界 —— 全程在你的编辑器里用自然语言完成。
 
@@ -207,6 +234,7 @@ MIT
 - [安装（最终用户）](#安装最终用户)
 - [开发](#开发)
 - [可用工具](#可用工具)
+- [用在其它 AI 客户端](#用在其它-ai-客户端)
 - [安全](#安全-1)
 - [三思而后行](#三思而后行)
 - [路线图](#路线图)
@@ -222,6 +250,8 @@ MIT
   不弹用户）；Core 服务永不可改。
 - **安全的本地桥** —— 只绑回环、每会话随机 Bearer token、`Host`/`Origin` 校验、必需自定义头，防御恶意网页。
 - **一键配置** —— 桌面应用负责启动服务、显示配对 token、安装插件，并为你写入 Claude Code 的 MCP 配置。
+- **兼容任意 MCP 客户端** —— 不止 Claude：Gemini、Cursor、VS Code/Copilot、Cline 等（含免费方案），
+  见 [docs/CLIENTS.md](docs/CLIENTS.md)。
 - **跨平台发布** —— CI 打包 Windows 与 macOS 安装包（arm64 + x64）。
 
 ## 工作原理
@@ -303,6 +333,27 @@ npm start --workspace packages/desktop
 
 所有变更类工具都支持 `dryRun: true` 以仅预览不落地。**没有任何人为尺寸上限** —— 在大型工程上用
 `maxDepth` / `get_children` / `view_elements` 的筛选来控制返回量。完整参考见 [docs/TOOLS.md](docs/TOOLS.md)。
+
+## 用在其它 AI 客户端
+
+它是标准 MCP 服务器，**不止 Claude** —— 任何支持"远程(HTTP) MCP + 自定义请求头"的客户端都能用。把客户端
+指向 `http://127.0.0.1:7331/mcp`，带上 `Authorization: Bearer <token>` 和 `X-Roblox-MCP: 1`（token 在 App 里）。
+
+**Google Gemini（免费额度）** —— 加到 `~/.gemini/settings.json`：
+
+```json
+{
+  "mcpServers": {
+    "roblox-studio": {
+      "httpUrl": "http://127.0.0.1:7331/mcp",
+      "headers": { "Authorization": "Bearer 粘贴你的token", "X-Roblox-MCP": "1" }
+    }
+  }
+}
+```
+
+Cursor、VS Code/Copilot、Cline + 本地 Ollama（免费）等客户端及**免费模型选项**，详见
+**[docs/CLIENTS.md](docs/CLIENTS.md)**。
 
 ## 安全
 

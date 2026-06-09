@@ -22,6 +22,18 @@
 
   let running = false;
 
+  // 把 MCP clientInfo.name 映射成好看的名字。
+  function prettyClient(name) {
+    const n = String(name).toLowerCase();
+    if (n.includes("claude")) return "Claude";
+    if (n.includes("gemini")) return "Gemini";
+    if (n.includes("cursor")) return "Cursor";
+    if (n.includes("code") || n.includes("vscode")) return "VS Code";
+    if (n.includes("cline")) return "Cline";
+    if (n.includes("windsurf")) return "Windsurf";
+    return name; // 未知则原样显示
+  }
+
   function setIndicator(dotId, textId, state, text) {
     const dot = el(dotId);
     dot.classList.remove("on", "off", "idle");
@@ -40,8 +52,9 @@
       status.pluginConnected ? "Plugin online (auto-connected)" : "Plugin offline");
     el("installPlugin").classList.toggle("hidden", status.pluginConnected);
 
+    const clientLabel = status.mcpClient ? prettyClient(status.mcpClient) : "MCP client";
     setIndicator("claudeDot", "claudeText", status.claudeConnected ? "on" : "idle",
-      status.claudeConnected ? "Claude Code connected" : "Claude Code not connected");
+      status.claudeConnected ? `${clientLabel} connected` : `${clientLabel} not connected`);
   }
 
   // 统一包一层 try/catch，任何错误都弹到界面上，避免"点了没反应"。
