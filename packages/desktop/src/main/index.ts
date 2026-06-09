@@ -47,7 +47,8 @@ function createWindow(): void {
   win = new BrowserWindow({
     width: 540,
     height: 700,
-    title: "Claude for Roblox Studio",
+    // 版本号放进标题栏：即使渲染层出问题，也能一眼看出是不是新版本实例。
+    title: `Claude for Roblox Studio v${app.getVersion()}`,
     webPreferences: {
       preload: preloadPath,
       contextIsolation: true,
@@ -81,6 +82,7 @@ function registerIpc(): void {
     return service;
   };
 
+  ipcMain.handle("get-version", () => app.getVersion());
   ipcMain.handle("get-status", (): CoreStatus | null => (service ? service.getStatus() : null));
   ipcMain.handle("get-token", (): string => (service ? service.getToken() : ""));
 

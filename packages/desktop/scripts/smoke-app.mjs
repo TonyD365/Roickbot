@@ -12,7 +12,8 @@ const electronPath = require("electron"); // 解析为 electron 二进制路径
 const appDir = join(dirname(fileURLToPath(import.meta.url)), ".."); // packages/desktop
 
 const TIMEOUT_MS = 30_000;
-const SUCCESS = ["[preload] api exposed", "[main] core service loaded"];
+// 必须看到 renderer 真正初始化完成（确认它拿到了 window.api），而不只是 preload 注入。
+const SUCCESS = ["[preload] api exposed", "[main] core service loaded", "[renderer] ui ready"];
 const FATAL = [
   "Uncaught",
   "has already been declared",
@@ -22,6 +23,8 @@ const FATAL = [
   "did-fail-load",
   "Cannot find module",
   "preload-error",
+  "window.api is undefined", // renderer 没拿到 preload 暴露的 api
+  "preload did not load",
 ];
 
 console.log(`Launching app headlessly: ${electronPath} ${appDir}`);

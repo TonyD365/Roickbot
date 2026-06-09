@@ -3,6 +3,7 @@
 import { contextBridge, ipcRenderer } from "electron";
 
 const api = {
+  getVersion: () => ipcRenderer.invoke("get-version"),
   getStatus: () => ipcRenderer.invoke("get-status"),
   getToken: () => ipcRenderer.invoke("get-token"),
   start: () => ipcRenderer.invoke("start-service"),
