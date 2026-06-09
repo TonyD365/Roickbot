@@ -123,7 +123,8 @@ npm start --workspace packages/desktop
 `set_properties`, `create_instance`, `delete_instance`, `clone_instance`, `reparent_instance`,
 `get_script_source`, `set_script_source`, `get_selection`, `set_selection`.
 
-**Run / test:** `run_simulation`, `stop_simulation`, `pause_simulation`, `get_run_state`.
+**Run / test:** `run_simulation`, `stop_simulation`, `pause_simulation`, `get_run_state`,
+`get_console_output`.
 
 **Phase 2 (make-graphics):** `build_parts`, `set_appearance`, `edit_terrain`, `set_lighting`,
 `insert_decal`, `insert_model`, `build_gui`.
@@ -282,7 +283,8 @@ npm start --workspace packages/desktop
 `set_properties`、`create_instance`、`delete_instance`、`clone_instance`、`reparent_instance`、
 `get_script_source`、`set_script_source`、`get_selection`、`set_selection`。
 
-**运行 / 测试：** `run_simulation`、`stop_simulation`、`pause_simulation`、`get_run_state`。
+**运行 / 测试：** `run_simulation`、`stop_simulation`、`pause_simulation`、`get_run_state`、
+`get_console_output`。
 
 **第二阶段（做图）：** `build_parts`、`set_appearance`、`edit_terrain`、`set_lighting`、
 `insert_decal`、`insert_model`、`build_gui`。
