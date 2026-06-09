@@ -12,12 +12,15 @@ const api = {
   installPlugin: () => ipcRenderer.invoke("install-plugin"),
   openExternal: (url: string) => ipcRenderer.invoke("open-external", url),
   restartToUpdate: () => ipcRenderer.invoke("restart-to-update"),
+  downloadUpdate: (url: string) => ipcRenderer.invoke("download-update", url),
   onStatus: (cb: (status: unknown) => void) =>
     ipcRenderer.on("status", (_e, status) => cb(status)),
   onHandshake: (cb: (info: unknown) => void) =>
     ipcRenderer.on("handshake", (_e, info) => cb(info)),
   onUpdateReady: (cb: (version: string) => void) =>
     ipcRenderer.on("update-ready", (_e, version) => cb(version)),
+  onUpdateManual: (cb: (info: { version: string; url: string }) => void) =>
+    ipcRenderer.on("update-manual", (_e, info) => cb(info)),
 };
 
 try {

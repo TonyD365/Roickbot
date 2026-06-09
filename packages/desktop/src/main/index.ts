@@ -1,11 +1,15 @@
 // Electron 主进程：启停核心服务、管理 UI、处理 IPC、后台自动更新。
 // 主进程为 CommonJS；核心包是 ESM-only，故通过动态 import 加载。
 
-import { app, BrowserWindow, ipcMain, dialog, shell } from "electron";
+import { app, BrowserWindow, ipcMain, dialog, shell, net } from "electron";
 import { join } from "node:path";
 import { copyFile } from "node:fs/promises";
+import { createWriteStream } from "node:fs";
 // electron-updater 是 CommonJS 具名导出，必须具名导入（它没有 default 导出）。
 import { autoUpdater } from "electron-updater";
+
+const REPO = "TonyD365/Claude-for-Roblox-Studio";
+const isMac = process.platform === "darwin";
 
 // core 是 ESM-only 包，从 CommonJS 主进程通过动态 import 加载，故这里用宽松类型。
 interface CoreStatus {
@@ -138,6 +142,35 @@ function registerIpc(): void {
 
   ipcMain.handle("open-external", (_e, url: string) => shell.openExternal(url));
   ipcMain.handle("restart-to-update", () => autoUpdater.quitAndInstall());
+
+  // macOS 半自动更新：把 dmg 下载到桌面并打开，用户自行拖进 Applications。
+  ipcMain.handle("download-update", async (_e, url: string) => {
+    const name = url.split("/").pop() || "Claude-for-Roblox-Studio.dmg";
+    const dest = join(app.getPath("desktop"), name);
+    await downloadFile(url, dest);
+    await shell.openPath(dest);
+    return { path: dest };
+  });
+}
+
+/** 用 Electron net 下载文件（自动跟随重定向）到本地路径。 */
+function downloadFile(url: string, dest: string): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const request = net.request(url);
+    request.on("response", (response) => {
+      const status = response.statusCode;
+      if (status >= 400) {
+        reject(new Error(`Download failed: HTTP ${status}`));
+        return;
+      }
+      const file = createWriteStream(dest);
+      response.on("data", (chunk) => file.write(chunk));
+      response.on("end", () => file.end(() => resolve()));
+      response.on("error", reject);
+    });
+    request.on("error", reject);
+    request.end();
+  });
 }
 
 /** 后台检查更新（每次启动时）。mac 未签名时无法自动安装，仅记录日志。 */
@@ -147,19 +180,29 @@ function startAutoUpdate(): void {
     return;
   }
   try {
-    autoUpdater.autoDownload = true;
-    autoUpdater.autoInstallOnAppQuit = true;
+    // macOS 未签名无法用 Squirrel 自动安装，改为"下载 dmg 到桌面并打开，用户手动拖入"。
+    // Windows 走 electron-updater 全自动下载 + 重启安装。
+    autoUpdater.autoDownload = !isMac;
+    autoUpdater.autoInstallOnAppQuit = !isMac;
     // 现在的 Release 标记为 pre-release，需允许更新器识别预发布版本。
     autoUpdater.allowPrerelease = true;
     autoUpdater.on("error", (err) => console.error("[updater] error:", err));
     autoUpdater.on("checking-for-update", () => console.log("[updater] checking for updates..."));
-    autoUpdater.on("update-available", (info) => console.log("[updater] update available:", info.version));
     autoUpdater.on("update-not-available", () => console.log("[updater] already up to date"));
+    autoUpdater.on("update-available", (info) => {
+      console.log("[updater] update available:", info.version);
+      if (isMac) {
+        const arch = process.arch === "arm64" ? "arm64" : "x64";
+        const file = `Claude-for-Roblox-Studio-${info.version}-${arch}.dmg`;
+        const url = `https://github.com/${REPO}/releases/download/v${info.version}/${file}`;
+        win?.webContents.send("update-manual", { version: info.version, url });
+      }
+    });
     autoUpdater.on("update-downloaded", (info) => {
       console.log("[updater] downloaded:", info.version);
       win?.webContents.send("update-ready", info.version);
     });
-    // .catch 避免未处理的 Promise 拒绝（例如仓库私有/无网络时的 404）。
+    // .catch 避免未处理的 Promise 拒绝（例如无网络/404）。
     autoUpdater.checkForUpdates().catch((e) => console.error("[updater] check failed:", e?.message ?? e));
   } catch (e) {
     console.error("[updater] failed to start:", e);
