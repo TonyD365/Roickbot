@@ -1,6 +1,11 @@
 # Claude for Roblox Studio
 
 [![CI](https://github.com/TonyD365/Claude-for-Roblox-Studio/actions/workflows/ci.yml/badge.svg)](https://github.com/TonyD365/Claude-for-Roblox-Studio/actions/workflows/ci.yml)
+[![Latest release](https://img.shields.io/github/v/release/TonyD365/Claude-for-Roblox-Studio?sort=semver)](https://github.com/TonyD365/Claude-for-Roblox-Studio/releases/latest)
+[![Downloads total](https://img.shields.io/github/downloads/TonyD365/Claude-for-Roblox-Studio/total?label=downloads)](https://github.com/TonyD365/Claude-for-Roblox-Studio/releases)
+[![Downloads latest](https://img.shields.io/github/downloads/TonyD365/Claude-for-Roblox-Studio/latest/total?label=downloads%40latest)](https://github.com/TonyD365/Claude-for-Roblox-Studio/releases/latest)
+[![Stars](https://img.shields.io/github/stars/TonyD365/Claude-for-Roblox-Studio?style=flat)](https://github.com/TonyD365/Claude-for-Roblox-Studio/stargazers)
+[![Last commit](https://img.shields.io/github/last-commit/TonyD365/Claude-for-Roblox-Studio)](https://github.com/TonyD365/Claude-for-Roblox-Studio/commits)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 A desktop app + MCP server that lets **Claude / Claude Code** control **Roblox Studio**. Claude can
@@ -177,6 +182,11 @@ MIT
 # Claude for Roblox Studio（中文）
 
 [![CI](https://github.com/TonyD365/Claude-for-Roblox-Studio/actions/workflows/ci.yml/badge.svg)](https://github.com/TonyD365/Claude-for-Roblox-Studio/actions/workflows/ci.yml)
+[![Latest release](https://img.shields.io/github/v/release/TonyD365/Claude-for-Roblox-Studio?sort=semver)](https://github.com/TonyD365/Claude-for-Roblox-Studio/releases/latest)
+[![Downloads total](https://img.shields.io/github/downloads/TonyD365/Claude-for-Roblox-Studio/total?label=downloads)](https://github.com/TonyD365/Claude-for-Roblox-Studio/releases)
+[![Downloads latest](https://img.shields.io/github/downloads/TonyD365/Claude-for-Roblox-Studio/latest/total?label=downloads%40latest)](https://github.com/TonyD365/Claude-for-Roblox-Studio/releases/latest)
+[![Stars](https://img.shields.io/github/stars/TonyD365/Claude-for-Roblox-Studio?style=flat)](https://github.com/TonyD365/Claude-for-Roblox-Studio/stargazers)
+[![Last commit](https://img.shields.io/github/last-commit/TonyD365/Claude-for-Roblox-Studio)](https://github.com/TonyD365/Claude-for-Roblox-Studio/commits)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 一个桌面应用 + MCP 服务器，让 **Claude / Claude Code** 直接操控 **Roblox Studio**。Claude 可以读写脚本、
