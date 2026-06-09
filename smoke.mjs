@@ -71,6 +71,9 @@ check("tools/list includes create_instance", listText.includes("create_instance"
 check("tools/list includes view_elements", listText.includes("view_elements"));
 check("tools/list includes run_simulation", listText.includes("run_simulation"));
 check("tools/list includes run_luau", listText.includes("run_luau"));
+check("tools/list includes build_parts (Phase 2)", listText.includes("build_parts"));
+check("tools/list includes set_lighting (Phase 2)", listText.includes("set_lighting"));
+check("tools/list includes build_gui (Phase 2)", listText.includes("build_gui"));
 
 // 8. 完整命令往返：MCP tools/call -> 队列 -> 模拟插件长轮询 -> 回传结果。
 let pluginRunning = true;

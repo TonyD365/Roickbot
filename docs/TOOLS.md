@@ -47,9 +47,21 @@ optional).
 - There are **no artificial size limits** — large projects are supported. Use `maxDepth` /
   `get_children` / `view_elements` filters to control how much data you pull back.
 
+## Phase 2 — make-graphics
+
+| Tool | Purpose |
+| --- | --- |
+| `build_parts` | Batch-create Parts (shape/size/position/orientation/color/material/anchored) in one undo waypoint. |
+| `set_appearance` | Set a BasePart's color / material / transparency / reflectance / shadow. |
+| `edit_terrain` | `fillBlock` / `fillBall` / `clear` on `Workspace.Terrain`. |
+| `set_lighting` | Set Lighting properties (ClockTime, Brightness, Ambient, FogColor, …), add an Atmosphere, or clear effects. |
+| `insert_decal` | Add a Decal (image) to a BasePart by asset id. |
+| `insert_model` | Insert a model/asset via `InsertService:LoadAsset` (must be yours or public). |
+| `build_gui` | Instantiate a declarative GUI tree under a parent (default StarterGui). |
+
+All accept `dryRun` and obey the same path allow/deny list.
+
 ## Planned
 
-- **Phase 2 (make-graphics)**: `build_parts`, `set_appearance`, `edit_terrain`, `set_lighting`,
-  `insert_decal_texture`, `build_gui`, `insert_model`.
 - **Phase 3 (Bot vision)**: `bot_spawn/despawn/move/look/state`, `bot_see` (structured
   raycast-based perception).
