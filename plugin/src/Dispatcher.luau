@@ -9,6 +9,7 @@ local scripts = require(script.Parent.handlers.scripts)
 local selection = require(script.Parent.handlers.selection)
 local run = require(script.Parent.handlers.run)
 local runLuau = require(script.Parent.handlers.runLuau)
+local graphics = require(script.Parent.handlers.graphics)
 
 local Dispatcher = {}
 
@@ -35,6 +36,14 @@ local handlers: { [string]: (any, any) -> any } = {
 	run_simulation = run.run_simulation,
 	stop_simulation = run.stop_simulation,
 	pause_simulation = run.pause_simulation,
+	-- 做图（Phase 2）
+	build_parts = graphics.build_parts,
+	set_appearance = graphics.set_appearance,
+	edit_terrain = graphics.edit_terrain,
+	set_lighting = graphics.set_lighting,
+	insert_decal = graphics.insert_decal,
+	insert_model = graphics.insert_model,
+	build_gui = graphics.build_gui,
 }
 
 -- 需要包 ChangeHistory 录制（可撤销 / dryRun 可回滚）的工具。
@@ -46,6 +55,13 @@ local MUTATING: { [string]: boolean } = {
 	reparent_instance = true,
 	set_script_source = true,
 	run_luau = true,
+	build_parts = true,
+	set_appearance = true,
+	edit_terrain = true,
+	set_lighting = true,
+	insert_decal = true,
+	insert_model = true,
+	build_gui = true,
 }
 
 function Dispatcher.dispatch(env: any): any
