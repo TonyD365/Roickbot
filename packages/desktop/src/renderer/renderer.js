@@ -94,18 +94,29 @@
     flash(`Saved to ${r.path} and opened it. Drag the app into Applications, then reopen.`);
   }));
 
+  // 显示版本号，便于区分新旧实例。
+  api.getVersion().then((v) => {
+    el("sub").textContent = `Bridge between Claude Code and Roblox Studio · v${v}`;
+  }).catch(() => {});
+
   api.onStatus((status) => render(status));
   api.onHandshake(() => { flash("Studio plugin connected."); refresh(); });
+  // 两个更新横幅互斥：任何时候最多显示一个。
   api.onUpdateReady((version) => {
+    el("manualUpdateBanner").classList.add("hidden");
     el("updateText").textContent = `Update ${version} downloaded.`;
     el("updateBanner").classList.remove("hidden");
   });
   api.onUpdateManual(({ version, url }) => {
     manualUrl = url;
+    el("updateBanner").classList.add("hidden");
     el("manualUpdateText").textContent = `Update ${version} available — download & drag into Applications.`;
     el("manualUpdateBanner").classList.remove("hidden");
   });
 
   setInterval(refresh, 2500);
   refresh();
+
+  // 成功标志：renderer 完整初始化且确实拿到了 window.api（供自检确认）。
+  console.log("[renderer] ui ready");
 })();
