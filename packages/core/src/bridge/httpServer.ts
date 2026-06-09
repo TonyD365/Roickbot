@@ -31,12 +31,18 @@ export class BridgeServer {
   private server: Server | null = null;
   private mcpTransports = new Map<string, StreamableHTTPServerTransport>();
   private lastMcpAt = 0;
+  private mcpClient: { name: string; version?: string } | null = null;
 
   constructor(private readonly opts: BridgeServerOptions) {}
 
   /** Claude Code 最近是否有 MCP 活动（用于 UI 判断"已连接"）。 */
   mcpActiveRecently(): boolean {
     return this.lastMcpAt > 0 && Date.now() - this.lastMcpAt < 60_000;
+  }
+
+  /** 最近一次 MCP initialize 上报的客户端（如 "claude-code" / "gemini-cli" / "cursor"）。 */
+  getMcpClient(): { name: string; version?: string } | null {
+    return this.mcpClient;
   }
 
   start(): Promise<void> {
@@ -104,6 +110,10 @@ export class BridgeServer {
 
     if (!transport) {
       if (req.method === "POST" && isInitializeRequest(body)) {
+        // 记录是哪个 AI 客户端连上来的（MCP initialize 会带 clientInfo）。
+        const info = (body as { params?: { clientInfo?: { name?: string; version?: string } } })?.params
+          ?.clientInfo;
+        if (info?.name) this.mcpClient = { name: info.name, version: info.version };
         transport = new StreamableHTTPServerTransport({
           sessionIdGenerator: () => randomUUID(),
           onsessioninitialized: (sid) => {
