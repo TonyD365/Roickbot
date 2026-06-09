@@ -87,7 +87,14 @@ function registerIpc(): void {
   ipcMain.handle("get-token", (): string => (service ? service.getToken() : ""));
 
   ipcMain.handle("start-service", async () => {
-    await needService().start();
+    try {
+      await needService().start();
+    } catch (e: unknown) {
+      if (e && (e as { code?: string }).code === "EADDRINUSE") {
+        throw new Error(`Port ${service.port} is already in use — another instance may be running.`);
+      }
+      throw e;
+    }
     return service.getStatus();
   });
   ipcMain.handle("stop-service", async () => {
@@ -211,28 +218,41 @@ function startAutoUpdate(): void {
   }
 }
 
-void app.whenReady().then(async () => {
-  // 先建窗口 + 注册 IPC，保证即使 core 加载失败也有界面和报错可看。
-  registerIpc();
-  createWindow();
-
-  try {
-    core = await import("@claude-roblox/core");
-    service = new core.CoreService({ tokenPath: join(app.getPath("userData"), "token") });
-    service.on("status", (s: CoreStatus) => win?.webContents.send("status", s));
-    service.on("handshake", (info: unknown) => win?.webContents.send("handshake", info));
-    console.log("[main] core service loaded");
-  } catch (e) {
-    console.error("[main] failed to load core service:", e);
-    dialog.showErrorBox("Failed to start", String(e));
-  }
-
-  startAutoUpdate();
-
-  app.on("activate", () => {
-    if (BrowserWindow.getAllWindows().length === 0) createWindow();
+// 单实例锁：杜绝多开（多开会争抢 127.0.0.1:7331 导致 EADDRINUSE，并造成新旧窗口混淆）。
+if (!app.requestSingleInstanceLock()) {
+  app.quit();
+} else {
+  app.on("second-instance", () => {
+    if (win) {
+      if (win.isMinimized()) win.restore();
+      win.show();
+      win.focus();
+    }
   });
-});
+
+  void app.whenReady().then(async () => {
+    // 先建窗口 + 注册 IPC，保证即使 core 加载失败也有界面和报错可看。
+    registerIpc();
+    createWindow();
+
+    try {
+      core = await import("@claude-roblox/core");
+      service = new core.CoreService({ tokenPath: join(app.getPath("userData"), "token") });
+      service.on("status", (s: CoreStatus) => win?.webContents.send("status", s));
+      service.on("handshake", (info: unknown) => win?.webContents.send("handshake", info));
+      console.log("[main] core service loaded");
+    } catch (e) {
+      console.error("[main] failed to load core service:", e);
+      dialog.showErrorBox("Failed to start", String(e));
+    }
+
+    startAutoUpdate();
+
+    app.on("activate", () => {
+      if (BrowserWindow.getAllWindows().length === 0) createWindow();
+    });
+  });
+}
 
 app.on("window-all-closed", () => {
   if (process.platform !== "darwin") app.quit();

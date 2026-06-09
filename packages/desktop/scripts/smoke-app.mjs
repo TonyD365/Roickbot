@@ -25,6 +25,7 @@ const FATAL = [
   "preload-error",
   "window.api is undefined", // renderer 没拿到 preload 暴露的 api
   "preload did not load",
+  "CSS bug", // .hidden 未生效，横幅误显示
 ];
 
 console.log(`Launching app headlessly: ${electronPath} ${appDir}`);
