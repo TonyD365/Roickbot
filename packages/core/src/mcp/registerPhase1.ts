@@ -222,35 +222,37 @@ export function registerPhase1Tools(server: McpServer, ctx: ToolContext): void {
 
   // ---- 运行 / 测试 ----
   server.registerTool(
-    "run_simulation",
+    "start_test",
     {
-      title: "Run (start physics simulation)",
+      title: "Start a play-test (Run mode)",
       description:
-        "Start the Studio Run simulation (RunService:Run) — physics runs without a local player. " +
-        "Note: full Play mode (F5, with a player character) has no clean plugin API; use Run + a Bot instead.",
+        "Start the game with RunService:Run() — physics runs live (no avatar; drive a Bot as the player). " +
+        "Full Play mode (F5, with a real character) has no clean plugin API, so this uses Run mode. " +
+        "IMPORTANT: while the game is running, all project-EDITING tools are locked (RUNTIME_LOCKED); " +
+        "only reads, get_console_output, bot_* and run_luau work. Call stop_test before editing again.",
       inputSchema: {},
     },
-    async () => forward(ctx, "run_simulation", {}),
+    async () => forward(ctx, "start_test", {}),
   );
 
   server.registerTool(
-    "stop_simulation",
+    "stop_test",
     {
-      title: "Stop simulation",
-      description: "Stop the running simulation (RunService:Stop).",
+      title: "Stop the play-test",
+      description: "Stop the running game (RunService:Stop) and return to Edit — editing is unlocked again.",
       inputSchema: {},
     },
-    async () => forward(ctx, "stop_simulation", {}),
+    async () => forward(ctx, "stop_test", {}),
   );
 
   server.registerTool(
-    "pause_simulation",
+    "pause_test",
     {
-      title: "Pause simulation",
-      description: "Pause the running simulation (RunService:Pause).",
+      title: "Pause the play-test",
+      description: "Pause the running game (RunService:Pause).",
       inputSchema: {},
     },
-    async () => forward(ctx, "pause_simulation", {}),
+    async () => forward(ctx, "pause_test", {}),
   );
 
   server.registerTool(

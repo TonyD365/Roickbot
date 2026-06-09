@@ -132,11 +132,14 @@ npm start --workspace packages/desktop
 `set_properties`, `create_instance`, `delete_instance`, `clone_instance`, `reparent_instance`,
 `get_script_source`, `set_script_source`, `get_selection`, `set_selection`.
 
-**Run / test:** `run_simulation`, `stop_simulation`, `pause_simulation`, `get_run_state`,
-`get_console_output`.
+**Run / test:** `start_test`, `stop_test`, `pause_test`, `get_run_state`, `get_console_output`.
 
 **Phase 2 (make-graphics):** `build_parts`, `set_appearance`, `edit_terrain`, `set_lighting`,
 `insert_decal`, `insert_model`, `build_gui`.
+
+**Phase 3 (Bot vision & self-test):** `bot_spawn`, `bot_despawn`, `bot_move`, `bot_look`,
+`bot_state`, `bot_see`. While a test is running, project-editing tools are locked (`RUNTIME_LOCKED`) —
+the run phase is read-only; reads, `bot_*`, `run_luau` and `get_console_output` stay available.
 
 **Universal:** `run_luau`.
 
@@ -192,8 +195,9 @@ Core services (`CoreGui`, `CorePackages`, …) can never be mutated.
 - **Phase 1 — core** ✅ scripts, instances, properties, selection, run/test, `run_luau`.
 - **Phase 2 — make-graphics** ✅ `build_parts`, `set_appearance`, `edit_terrain`, `set_lighting`,
   `insert_decal`, `insert_model`, `build_gui`.
-- **Phase 3 — Bot vision** ⏳ `bot_spawn/despawn/move/look/state`, `bot_see` (structured,
-  raycast-based perception).
+- **Phase 3 — Bot vision & self-test loop** ✅ `bot_spawn/despawn/move/look/state`, `bot_see`
+  (structured, raycast-based perception); `start_test/stop_test/pause_test`; a runtime lock that
+  makes the project read-only while the game is running.
 
 ## License
 
@@ -323,11 +327,14 @@ npm start --workspace packages/desktop
 `set_properties`、`create_instance`、`delete_instance`、`clone_instance`、`reparent_instance`、
 `get_script_source`、`set_script_source`、`get_selection`、`set_selection`。
 
-**运行 / 测试：** `run_simulation`、`stop_simulation`、`pause_simulation`、`get_run_state`、
-`get_console_output`。
+**运行 / 测试：** `start_test`、`stop_test`、`pause_test`、`get_run_state`、`get_console_output`。
 
 **第二阶段（做图）：** `build_parts`、`set_appearance`、`edit_terrain`、`set_lighting`、
 `insert_decal`、`insert_model`、`build_gui`。
+
+**第三阶段（Bot 视觉 + 自我测试）：** `bot_spawn`、`bot_despawn`、`bot_move`、`bot_look`、
+`bot_state`、`bot_see`。游戏运行时,工程编辑类工具被锁(`RUNTIME_LOCKED`)——运行态只读;读取、
+`bot_*`、`run_luau`、`get_console_output` 仍可用。
 
 **万能：** `run_luau`。
 
@@ -379,7 +386,7 @@ Cursor、VS Code/Copilot、Cline + 本地 Ollama（免费）等客户端及**免
 - **第一阶段 —— 核心** ✅ 脚本、实例、属性、选择、运行/测试、`run_luau`。
 - **第二阶段 —— 做图** ✅ `build_parts`、`set_appearance`、`edit_terrain`、`set_lighting`、
   `insert_decal`、`insert_model`、`build_gui`。
-- **第三阶段 —— Bot 视觉** ⏳ `bot_spawn/despawn/move/look/state`、`bot_see`（基于射线的结构化感知）。
+- **第三阶段 —— Bot 视觉 + 自我测试闭环** ✅ `bot_spawn/despawn/move/look/state`、`bot_see`（基于射线的结构化感知）；`start_test/stop_test/pause_test`；运行时锁（运行中工程只读）。
 
 ## 许可
 

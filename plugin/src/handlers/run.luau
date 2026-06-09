@@ -13,17 +13,17 @@ local function state(): string
 	return "Edit"
 end
 
-function M.run_simulation()
+function M.start_test()
 	RunService:Run()
 	return { state = "Running" }
 end
 
-function M.stop_simulation()
+function M.stop_test()
 	RunService:Stop()
 	return { state = "Edit" }
 end
 
-function M.pause_simulation()
+function M.pause_test()
 	RunService:Pause()
 	return { state = "Paused" }
 end

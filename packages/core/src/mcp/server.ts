@@ -3,6 +3,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { registerPhase1Tools } from "./registerPhase1.js";
 import { registerPhase2Tools } from "./registerPhase2.js";
+import { registerPhase3Tools } from "./registerPhase3.js";
 import type { ToolContext } from "../tools/types.js";
 
 export const SERVER_NAME = "claude-for-roblox-studio";
@@ -16,6 +17,6 @@ export function buildMcpServer(ctx: ToolContext): McpServer {
   });
   registerPhase1Tools(server, ctx);
   registerPhase2Tools(server, ctx); // 做图
-  // Phase 3（Bot 视觉）将在此追加 registerPhase3。
+  registerPhase3Tools(server, ctx); // Bot 视觉 + 自我测试闭环
   return server;
 }
