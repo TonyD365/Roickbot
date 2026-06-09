@@ -13,6 +13,23 @@ The connection is always the same:
 > First do the one-time setup in [INSTALL.md](INSTALL.md): start the service, install the Studio
 > plugin, enable HTTP, and pair. Then point any client below at the endpoint above.
 
+## Easiest: let the app write it for you
+
+You don't have to edit any of the files below by hand. In the desktop app, pick your client from
+the **dropdown next to "Install MCP config"** and click the button. The app writes the entry in
+**that client's exact format** (each client uses a slightly different `type`/key — e.g. Cline needs
+`"streamableHttp"`, Gemini uses `httpUrl`) to the right location:
+
+| Client | Where it writes |
+| --- | --- |
+| Claude Code | `~/.claude.json` (auto) |
+| Cursor | `~/.cursor/mcp.json` (auto) |
+| Gemini CLI | `~/.gemini/settings.json` (auto) |
+| Cline | you pick the file (`cline_mcp_settings.json`) |
+| VS Code | you pick the file (`.vscode/mcp.json`) |
+
+The manual snippets below are kept for reference / unusual setups.
+
 ---
 
 ## Google Gemini (free tier) — recommended free option
@@ -90,8 +107,26 @@ Use the app's **Install MCP config** button, or add it manually (see
 ## Cline / Roo Code / Continue (VS Code) — works with free local models
 
 These free extensions support MCP and can be driven by **free local models via Ollama**
-(e.g. `qwen2.5-coder`, `llama3.1`) or a free API tier. Add a remote/SSE MCP server pointing at the
-endpoint + headers above (the exact field names vary by extension; use `url` + `headers`).
+(e.g. `qwen2.5-coder`, `llama3.1`) or a free API tier.
+
+Cline requires `"type": "streamableHttp"` for a remote HTTP server — without it Cline errors and
+won't connect. Add this to its `cline_mcp_settings.json`:
+
+```json
+{
+  "mcpServers": {
+    "roblox-studio": {
+      "type": "streamableHttp",
+      "url": "http://127.0.0.1:7331/mcp",
+      "headers": { "Authorization": "Bearer PASTE_TOKEN", "X-Roblox-MCP": "1" },
+      "disabled": false,
+      "autoApprove": []
+    }
+  }
+}
+```
+
+(Or just use the app's **Install MCP config** with **Cline** selected — it writes this exact shape.)
 
 ---
 

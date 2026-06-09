@@ -12,6 +12,8 @@ const REPO = "TonyD365/Claude-for-Roblox-Studio";
 const isMac = process.platform === "darwin";
 
 // core 是 ESM-only 包，从 CommonJS 主进程通过动态 import 加载，故这里用宽松类型。
+type McpClient = "claude" | "cursor" | "gemini" | "cline" | "vscode";
+
 interface CoreStatus {
   running: boolean;
   port: number;
@@ -104,38 +106,44 @@ function registerIpc(): void {
   });
   ipcMain.handle("rotate-token", async () => needService().rotateToken());
 
-  // "Install MCP config"：给两个选项 —— ① 自动写入用户配置；② 手动选择文件位置。
-  ipcMain.handle("write-config", async () => {
+  // "Install MCP config"：按所选客户端的正确格式写入。
+  // 路径固定的客户端(Claude/Cursor/Gemini)给「自动安装 / 选位置」二选一；
+  // 路径不固定的(Cline/VS Code)直接弹保存框，但内容仍按该客户端格式生成。
+  ipcMain.handle("write-config", async (_e, clientId?: string) => {
     const s = needService();
     if (!s.isRunning()) await s.start();
 
-    const choice = await dialog.showMessageBox(win!, {
-      type: "question",
-      buttons: ["Auto-install", "Choose location…", "Cancel"],
-      defaultId: 0,
-      cancelId: 2,
-      message: "Install the Claude Code MCP config",
-      detail:
-        "Auto-install writes the server entry to your user config (~/.claude.json).\n" +
-        "Or choose a specific .mcp.json location (e.g. a project folder).",
-    });
-    if (choice.response === 2) return { written: false, cancelled: true };
+    const client = (clientId as McpClient) || "claude";
+    const info = core.clientInfo(client);
 
-    let target: string;
-    if (choice.response === 0) {
-      target = core.userConfigPath();
-    } else {
+    let target: string | undefined;
+    if (info.defaultPath) {
+      const choice = await dialog.showMessageBox(win!, {
+        type: "question",
+        buttons: ["Auto-install", "Choose location…", "Cancel"],
+        defaultId: 0,
+        cancelId: 2,
+        message: `Install the ${info.label} MCP config`,
+        detail:
+          `Auto-install writes the server entry to ${info.defaultPath}.\n` +
+          `Or choose a specific config file location.\n\n${info.note}`,
+      });
+      if (choice.response === 2) return { written: false, cancelled: true };
+      if (choice.response === 0) target = info.defaultPath;
+    }
+
+    if (!target) {
       const r = await dialog.showSaveDialog(win!, {
-        title: "Save MCP config",
-        defaultPath: ".mcp.json",
+        title: `Save ${info.label} MCP config`,
+        defaultPath: defaultConfigFilename(client),
         filters: [{ name: "MCP config", extensions: ["json"] }],
       });
       if (r.canceled || !r.filePath) return { written: false, cancelled: true };
       target = r.filePath;
     }
 
-    await core.writeMcpConfig(target, s.port, s.getToken());
-    return { written: true, path: target };
+    const res = await core.writeClientConfig(client, target, s.port, s.getToken());
+    return { written: true, path: res.path, client };
   });
 
   // "Install Plugin"：弹文件保存框，用户自选位置，把内置插件写过去。
@@ -161,6 +169,13 @@ function registerIpc(): void {
     await shell.openPath(dest);
     return { path: dest };
   });
+}
+
+/** 没有固定路径时，给保存框一个合理的默认文件名。 */
+function defaultConfigFilename(client: McpClient): string {
+  if (client === "cline") return "cline_mcp_settings.json";
+  if (client === "vscode") return "mcp.json";
+  return ".mcp.json";
 }
 
 /** 用 Electron net 下载文件（自动跟随重定向）到本地路径。 */
