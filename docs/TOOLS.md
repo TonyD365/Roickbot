@@ -38,6 +38,36 @@ optional).
 > `get_console_output`, `start_test`/`stop_test`/`pause_test`, `run_luau`, and all `bot_*`. Call
 > `stop_test` before editing again.
 
+## Search, tags & surgical edits
+
+| Tool | Purpose |
+| --- | --- |
+| `edit_script_lines` | Edit a line range of a script (`replace` / `insert` / `delete`) instead of replacing the whole source. |
+| `find_instances` | Search the DataModel by `name` (contains/exact) and/or `className` (`:IsA`), optional `rootPath`/`limit`. |
+| `search_by_property` | Find instances where a `property` equals/contains a `value` (e.g. `Anchored=false`, `Material=Neon`). |
+| `search_scripts` | Grep across all script sources for a `query`; returns matching scripts + line numbers + line text. |
+| `get_script_info` | A script "file"'s info: class, path, line/char count, `Enabled`/`Disabled`, `RunContext`, attributes (no source). |
+| `get_tagged` / `get_tags` | List instances with a CollectionService tag / list an instance's tags. |
+| `add_tag` / `remove_tag` | Add / remove a CollectionService tag (mutating, undoable). |
+
+> `search_scripts` and `get_script_info` are **read-only**, so they work **while the game is
+> running** — handy for debugging a live play-test (e.g. find where an error message comes from, or
+> check whether a script is `Disabled` / has the wrong `RunContext`).
+
+## Project harness (cross-session memory)
+
+Handled **locally by the app** (persisted to a JSON file next to the token) — these don't touch
+Studio, so they work even with the plugin offline. They give the AI a persistent project memory
+across sessions.
+
+| Tool | Purpose | Analogy |
+| --- | --- | --- |
+| `harness_init` | One-time project init (`game_name`, `genre`, `description`). | `npm init` |
+| `harness_session_start` | Start a session with `initial_goals`; returns a `session_id` + "where we left off" (open features + last session's handoff). | "what did I do last time" |
+| `harness_session_end` | End a session, leaving `handoff_notes` + `summary` for the next one. | commit message + handoff doc |
+| `harness_status` | Current project state (features + sessions). | `git status` |
+| `harness_feature_update` | Add/update a feature: status, priority, tags. | issue tracker |
+
 ## Universal escape hatch
 
 | Tool | Purpose |

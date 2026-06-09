@@ -15,12 +15,14 @@ import { authorizeRequest } from "../security/auth.js";
 import { PROTOCOL_VERSION, ResponseEnvelope, HandshakeInfo } from "./envelope.js";
 import type { CommandQueue } from "./commandQueue.js";
 import type { ConfirmStore } from "../safety/confirm.js";
+import type { Harness } from "../harness/harness.js";
 
 export interface BridgeServerOptions {
   port: number;
   token: string;
   queue: CommandQueue;
   confirm: ConfirmStore;
+  harness: Harness;
   /** handshake 回调（用于通知 UI 有插件接入）。 */
   onHandshake?: (info: HandshakeInfo) => void;
 }
@@ -123,7 +125,11 @@ export class BridgeServer {
         transport.onclose = () => {
           if (transport!.sessionId) this.mcpTransports.delete(transport!.sessionId);
         };
-        const mcp = buildMcpServer({ queue: this.opts.queue, confirm: this.opts.confirm });
+        const mcp = buildMcpServer({
+          queue: this.opts.queue,
+          confirm: this.opts.confirm,
+          harness: this.opts.harness,
+        });
         await mcp.connect(transport);
       } else {
         res.writeHead(400, { "content-type": "application/json" });

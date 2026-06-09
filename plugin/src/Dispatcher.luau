@@ -13,6 +13,7 @@ local runLuau = require(script.Parent.handlers.runLuau)
 local graphics = require(script.Parent.handlers.graphics)
 local console = require(script.Parent.handlers.console)
 local bot = require(script.Parent.handlers.bot)
+local query = require(script.Parent.handlers.query)
 
 local Dispatcher = {}
 
@@ -24,11 +25,18 @@ local handlers: { [string]: (any, any) -> any } = {
 	view_elements = tree.view_elements,
 	get_properties = properties.get_properties,
 	get_script_source = scripts.get_script_source,
+	search_scripts = scripts.search_scripts,
+	get_script_info = scripts.get_script_info,
 	get_selection = selection.get_selection,
 	get_run_state = run.get_run_state,
 	get_console_output = console.get_console_output,
 	bot_state = bot.bot_state,
 	bot_see = bot.bot_see,
+	-- 搜索 / 标签（读取）
+	find_instances = query.find_instances,
+	search_by_property = query.search_by_property,
+	get_tagged = query.get_tagged,
+	get_tags = query.get_tags,
 	-- 变更
 	set_properties = properties.set_properties,
 	create_instance = instances.create_instance,
@@ -36,6 +44,9 @@ local handlers: { [string]: (any, any) -> any } = {
 	clone_instance = instances.clone_instance,
 	reparent_instance = instances.reparent_instance,
 	set_script_source = scripts.set_script_source,
+	edit_script_lines = scripts.edit_script_lines,
+	add_tag = query.add_tag,
+	remove_tag = query.remove_tag,
 	set_selection = selection.set_selection,
 	run_luau = runLuau.run_luau,
 	-- 运行 / 测试
@@ -65,6 +76,9 @@ local MUTATING: { [string]: boolean } = {
 	clone_instance = true,
 	reparent_instance = true,
 	set_script_source = true,
+	edit_script_lines = true,
+	add_tag = true,
+	remove_tag = true,
 	run_luau = true,
 	build_parts = true,
 	set_appearance = true,
@@ -87,6 +101,9 @@ local LOCK_WHILE_RUNNING: { [string]: boolean } = {
 	clone_instance = true,
 	reparent_instance = true,
 	set_script_source = true,
+	edit_script_lines = true,
+	add_tag = true,
+	remove_tag = true,
 	set_selection = true,
 	build_parts = true,
 	set_appearance = true,

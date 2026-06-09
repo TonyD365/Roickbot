@@ -2,10 +2,12 @@
 
 import { CommandFailure, CommandQueue } from "../bridge/commandQueue.js";
 import { ConfirmStore } from "../safety/confirm.js";
+import type { Harness } from "../harness/harness.js";
 
 export interface ToolContext {
   queue: CommandQueue;
   confirm: ConfirmStore;
+  harness: Harness;
 }
 
 /** MCP 工具返回的内容块（仅用到文本）。 */
