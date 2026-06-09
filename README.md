@@ -8,9 +8,11 @@ read and edit scripts, inspect and modify the scene and models, run the simulati
 phases — build graphics and drive an in-game **Bot** that reports what it "sees" as structured data,
 all through natural language from your editor.
 
-> **Status:** Phase 1 (core) is complete — a working, secured bridge with tools for scripts,
-> instances, properties, selection, and run/test, plus a universal `run_luau` escape hatch.
-> Phase 2 (make-graphics) and Phase 3 (Bot vision) are planned.
+> **Status:** v1.0.0 released. Phase 1 (core) and Phase 2 (make-graphics) are complete — a
+> working, secured bridge with tools for scripts, instances, properties, selection, run/test,
+> and building scenes (parts, terrain, lighting, decals, models, GUI), plus a universal
+> `run_luau` escape hatch. Phase 3 (Bot vision) is next. Cross-platform installers with
+> auto-update are published on the [Releases](https://github.com/TonyD365/Claude-for-Roblox-Studio/releases) page.
 
 *(中文版见下方 / Chinese version below.)*
 
@@ -123,6 +125,9 @@ npm start --workspace packages/desktop
 
 **Run / test:** `run_simulation`, `stop_simulation`, `pause_simulation`, `get_run_state`.
 
+**Phase 2 (make-graphics):** `build_parts`, `set_appearance`, `edit_terrain`, `set_lighting`,
+`insert_decal`, `insert_model`, `build_gui`.
+
 **Universal:** `run_luau`.
 
 All mutating tools accept `dryRun: true` to preview without applying. There are **no artificial size
@@ -153,8 +158,8 @@ Core services (`CoreGui`, `CorePackages`, …) can never be mutated.
 ## Roadmap
 
 - **Phase 1 — core** ✅ scripts, instances, properties, selection, run/test, `run_luau`.
-- **Phase 2 — make-graphics** ⏳ `build_parts`, `set_appearance`, `edit_terrain`, `set_lighting`,
-  `insert_decal_texture`, `build_gui`, `insert_model`.
+- **Phase 2 — make-graphics** ✅ `build_parts`, `set_appearance`, `edit_terrain`, `set_lighting`,
+  `insert_decal`, `insert_model`, `build_gui`.
 - **Phase 3 — Bot vision** ⏳ `bot_spawn/despawn/move/look/state`, `bot_see` (structured,
   raycast-based perception).
 
@@ -178,8 +183,10 @@ MIT
 查看和修改场景与模型、运行仿真，并在后续阶段构建图形、驱动一个游戏内 **Bot** 并以结构化数据的形式"看到"
 世界 —— 全程在你的编辑器里用自然语言完成。
 
-> **状态：** 第一阶段（核心）已完成 —— 一条可用且带安全鉴权的桥，包含脚本、实例、属性、选择、运行/测试等
-> 工具，外加万能的 `run_luau` 逃生舱。第二阶段（做图）与第三阶段（Bot 视觉）规划中。
+> **状态：** v1.0.0 已发布。第一阶段（核心）与第二阶段（做图）均已完成 —— 一条可用且带安全鉴权的桥，
+> 涵盖脚本、实例、属性、选择、运行/测试，以及搭建场景（Part、地形、光照、贴图、模型、GUI），外加万能的
+> `run_luau` 逃生舱。第三阶段（Bot 视觉）进行中。带自动更新的跨平台安装包见
+> [Releases](https://github.com/TonyD365/Claude-for-Roblox-Studio/releases) 页面。
 
 ## 目录
 
@@ -277,6 +284,9 @@ npm start --workspace packages/desktop
 
 **运行 / 测试：** `run_simulation`、`stop_simulation`、`pause_simulation`、`get_run_state`。
 
+**第二阶段（做图）：** `build_parts`、`set_appearance`、`edit_terrain`、`set_lighting`、
+`insert_decal`、`insert_model`、`build_gui`。
+
 **万能：** `run_luau`。
 
 所有变更类工具都支持 `dryRun: true` 以仅预览不落地。**没有任何人为尺寸上限** —— 在大型工程上用
@@ -304,8 +314,8 @@ npm start --workspace packages/desktop
 ## 路线图
 
 - **第一阶段 —— 核心** ✅ 脚本、实例、属性、选择、运行/测试、`run_luau`。
-- **第二阶段 —— 做图** ⏳ `build_parts`、`set_appearance`、`edit_terrain`、`set_lighting`、
-  `insert_decal_texture`、`build_gui`、`insert_model`。
+- **第二阶段 —— 做图** ✅ `build_parts`、`set_appearance`、`edit_terrain`、`set_lighting`、
+  `insert_decal`、`insert_model`、`build_gui`。
 - **第三阶段 —— Bot 视觉** ⏳ `bot_spawn/despawn/move/look/state`、`bot_see`（基于射线的结构化感知）。
 
 ## 许可
