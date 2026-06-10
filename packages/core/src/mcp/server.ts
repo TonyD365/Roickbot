@@ -6,6 +6,7 @@ import { registerPhase2Tools } from "./registerPhase2.js";
 import { registerPhase3Tools } from "./registerPhase3.js";
 import { registerQueryTools } from "./registerQueryTools.js";
 import { registerHarnessTools } from "./registerHarness.js";
+import { registerRuntimeTools } from "./registerRuntimeTools.js";
 import type { ToolContext } from "../tools/types.js";
 
 export const SERVER_NAME = "claude-for-roblox-studio";
@@ -22,5 +23,6 @@ export function buildMcpServer(ctx: ToolContext): McpServer {
   registerPhase3Tools(server, ctx); // Bot 视觉 + 自我测试闭环
   registerQueryTools(server, ctx); // 搜索 / 标签 / 行级脚本编辑
   registerHarnessTools(server, ctx); // 跨 session 项目记忆（本地处理）
+  registerRuntimeTools(server, ctx); // 运行时 server-agent + 事件
   return server;
 }

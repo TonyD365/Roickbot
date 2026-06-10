@@ -195,6 +195,37 @@ plugin.Unloading:Connect(function()
 	running = false
 end)
 
+------------------------------------------------------------------- 运行状态监听
+-- 监听 Edit/Running/Paused 变化，主动 push 事件（让 wait_for_event 能感知测试结束/状态切换）。
+do
+	local RunService = game:GetService("RunService")
+	local function stateStr(): string
+		if RunService:IsRunning() then
+			return "Running"
+		elseif not RunService:IsEdit() then
+			return "Paused"
+		end
+		return "Edit"
+	end
+	task.spawn(function()
+		local last = stateStr()
+		while true do
+			task.wait(0.5)
+			if running then
+				local s = stateStr()
+				if s ~= last then
+					last = s
+					pcall(Net.event, baseUrl(), getToken(), {
+						type = "runState",
+						state = s,
+						isRunning = RunService:IsRunning(),
+					})
+				end
+			end
+		end
+	end)
+end
+
 -- 已配对（存有 token）则开 Studio 自动连接。
 if getToken() ~= "" then
 	connect()

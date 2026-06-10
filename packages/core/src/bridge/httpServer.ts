@@ -16,13 +16,17 @@ import { PROTOCOL_VERSION, ResponseEnvelope, HandshakeInfo } from "./envelope.js
 import type { CommandQueue } from "./commandQueue.js";
 import type { ConfirmStore } from "../safety/confirm.js";
 import type { Harness } from "../harness/harness.js";
+import type { EventBus } from "./events.js";
 
 export interface BridgeServerOptions {
   port: number;
   token: string;
   queue: CommandQueue;
+  /** 运行时 server-agent 通道。 */
+  agentQueue: CommandQueue;
   confirm: ConfirmStore;
   harness: Harness;
+  events: EventBus;
   /** handshake 回调（用于通知 UI 有插件接入）。 */
   onHandshake?: (info: HandshakeInfo) => void;
 }
@@ -95,6 +99,7 @@ export class BridgeServer {
     if (path === "/poll" && req.method === "GET") return this.handlePoll(url, res);
     if (path === "/response" && req.method === "POST") return this.handleResponse(req, res);
     if (path === "/handshake" && req.method === "POST") return this.handleHandshake(req, res);
+    if (path === "/event" && req.method === "POST") return this.handleEvent(req, res);
     if (path === "/health" && req.method === "GET") return this.handleHealth(res);
 
     res.writeHead(404, { "content-type": "application/json" });
@@ -127,8 +132,11 @@ export class BridgeServer {
         };
         const mcp = buildMcpServer({
           queue: this.opts.queue,
+          agentQueue: this.opts.agentQueue,
           confirm: this.opts.confirm,
           harness: this.opts.harness,
+          events: this.opts.events,
+          serverInfo: { port: this.opts.port, token: this.opts.token },
         });
         await mcp.connect(transport);
       } else {
@@ -147,10 +155,11 @@ export class BridgeServer {
     await transport.handleRequest(req, res, body);
   }
 
-  // ---- 插件长轮询 ----
+  // ---- 长轮询（plugin 默认通道 / agent 运行时通道，由 role 区分） ----
   private async handlePoll(url: URL, res: ServerResponse): Promise<void> {
     const sessionId = url.searchParams.get("sessionId") ?? "";
-    const env = await this.opts.queue.poll(sessionId);
+    const queue = url.searchParams.get("role") === "agent" ? this.opts.agentQueue : this.opts.queue;
+    const env = await queue.poll(sessionId);
     if (!env) {
       res.writeHead(204);
       res.end();
@@ -160,20 +169,25 @@ export class BridgeServer {
     res.end(JSON.stringify(env));
   }
 
-  // ---- 插件回传结果 ----
+  // ---- 回传结果（id 可能属于任一通道，两边都试一下） ----
   private async handleResponse(req: IncomingMessage, res: ServerResponse): Promise<void> {
     const body = (await readJsonBody(req)) as ResponseEnvelope;
-    const matched = this.opts.queue.resolveResponse(body);
+    const matched = this.opts.queue.resolveResponse(body) || this.opts.agentQueue.resolveResponse(body);
     res.writeHead(200, { "content-type": "application/json" });
     res.end(JSON.stringify({ ok: matched }));
   }
 
-  // ---- 插件配对 ----
+  // ---- 配对（plugin 或 server-agent） ----
   private async handleHandshake(req: IncomingMessage, res: ServerResponse): Promise<void> {
-    const info = (await readJsonBody(req)) as HandshakeInfo;
-    this.opts.queue.setConnectedSession(info.sessionId);
-    this.opts.queue.setPluginTools(info.tools);
-    this.opts.onHandshake?.(info);
+    const info = (await readJsonBody(req)) as HandshakeInfo & { role?: string };
+    if (info.role === "server-agent") {
+      // 运行时 agent 上线（无需 UI 通知，不影响插件配对状态）。
+      this.opts.agentQueue.setConnectedSession(info.sessionId);
+    } else {
+      this.opts.queue.setConnectedSession(info.sessionId);
+      this.opts.queue.setPluginTools(info.tools);
+      this.opts.onHandshake?.(info);
+    }
     res.writeHead(200, { "content-type": "application/json" });
     res.end(
       JSON.stringify({
@@ -184,6 +198,16 @@ export class BridgeServer {
     );
   }
 
+  // ---- 事件上报（插件/agent 主动 push，如运行状态变化） ----
+  private async handleEvent(req: IncomingMessage, res: ServerResponse): Promise<void> {
+    const body = (await readJsonBody(req)) as { type?: string; [k: string]: unknown };
+    if (body && typeof body.type === "string") {
+      this.opts.events.publish(body as { type: string });
+    }
+    res.writeHead(200, { "content-type": "application/json" });
+    res.end(JSON.stringify({ ok: true }));
+  }
+
   // ---- 健康检查 ----
   private handleHealth(res: ServerResponse): void {
     res.writeHead(200, { "content-type": "application/json" });
@@ -192,6 +216,7 @@ export class BridgeServer {
         ok: true,
         serverVersion: SERVER_VERSION,
         pluginConnected: this.opts.queue.isPluginConnected(),
+        agentConnected: this.opts.agentQueue.isPluginConnected(),
         queueDepth: this.opts.queue.queueDepth,
       }),
     );

@@ -35,8 +35,30 @@ optional).
 >
 > **Runtime lock:** while a test is running, all project-**editing** tools are blocked with
 > `RUNTIME_LOCKED` (the run phase is read-only). Allowed while running: all reads,
-> `get_console_output`, `start_test`/`stop_test`/`pause_test`, `run_luau`, and all `bot_*`. Call
-> `stop_test` before editing again.
+> `get_console_output`, `start_test`/`stop_test`/`pause_test`, `run_luau`, `fire_signal`, and all
+> `bot_*`. Call `stop_test` before editing again.
+
+## Runtime server agent & events
+
+On `start_test`, the plugin injects a small **server agent** Script into the running game. It runs in
+the game's real **server** context and connects back to the bridge on a separate channel, so these
+tools can act as the server (which the plugin context can't):
+
+| Tool | Purpose |
+| --- | --- |
+| `run_luau` with `context:"server"` | Run Luau **in the running game's server context** (real `IsServer()`/`IsRunning()`). Needs `start_test`. Default `context:"plugin"` runs in the edit/plugin VM as before. |
+| `fire_signal` | Call a method on an instance in server context — e.g. a RemoteEvent's `FireAllClients`/`FireClient`, a BindableEvent's `Fire`, a `ProximityPrompt`'s `InputHoldBegin`/`InputHoldEnd`, or `BasePart:SetNetworkOwner`. Use it to trigger server-side listeners. |
+| `wait_for_event` | Block until Studio pushes the next event (e.g. `runState` changes / the test stopping), instead of polling `get_run_state`. Returns the event or `{timedOut:true}`. |
+
+> The agent only exists **while a test is running** and is removed on `stop_test`. `context:"server"`
+> tools return a clear error if no test is running. There is **no client context** in Run mode (no
+> real player/client), so client-only input can't be simulated from here — drive client-facing flows
+> server-side via `fire_signal`/`run_luau(context:"server")`.
+
+> **Bot as a player:** `bot_spawn { asPlayer: true }` tags the Bot `ClaudePlayer` and sets an
+> `OwnerUserId` attribute. A real `Players` entry can't exist in Run mode (no client), so
+> `Players:GetPlayers()` won't include it — have player systems match the tag, or set network
+> ownership via `run_luau(context:"server")`.
 
 ## Search, tags & surgical edits
 

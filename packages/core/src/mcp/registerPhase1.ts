@@ -231,12 +231,17 @@ export function registerPhase1Tools(server: McpServer, ctx: ToolContext): void {
       title: "Start a play-test (Run mode)",
       description:
         "Start the game with RunService:Run() — physics runs live (no avatar; drive a Bot as the player). " +
-        "Full Play mode (F5, with a real character) has no clean plugin API, so this uses Run mode. " +
-        "IMPORTANT: while the game is running, all project-EDITING tools are locked (RUNTIME_LOCKED); " +
-        "only reads, get_console_output, bot_* and run_luau work. Call stop_test before editing again.",
+        "Also injects a server-runtime agent into the running game, enabling run_luau(context:'server'), " +
+        "fire_signal, and wait_for_event. Full Play mode (F5, with a real character) has no clean plugin API, " +
+        "so this uses Run mode. IMPORTANT: while the game is running, all project-EDITING tools are locked " +
+        "(RUNTIME_LOCKED); only reads, get_console_output, bot_*, run_luau and fire_signal work. " +
+        "Call stop_test before editing again.",
       inputSchema: {},
     },
-    async () => forward(ctx, "start_test", {}),
+    async () =>
+      forward(ctx, "start_test", {
+        agent: { port: ctx.serverInfo.port, token: ctx.serverInfo.token },
+      }),
   );
 
   server.registerTool(
@@ -307,6 +312,13 @@ export function registerPhase1Tools(server: McpServer, ctx: ToolContext): void {
       inputSchema: {
         source: z.string(),
         returnExpression: z.boolean().optional().describe("If true, treat source as an expression to return."),
+        context: z
+          .enum(["plugin", "server"])
+          .optional()
+          .describe(
+            'Where to run: "plugin" (default, edit context) or "server" (inside the running game\'s server ' +
+              "context via the runtime agent — needs start_test first; gives real IsServer()/IsRunning()).",
+          ),
         dryRun: z.boolean().optional(),
         timeoutMs: z.number().int().optional(),
       },
@@ -315,6 +327,7 @@ export function registerPhase1Tools(server: McpServer, ctx: ToolContext): void {
       forward(ctx, "run_luau", args, {
         dryRun: (args as { dryRun?: boolean }).dryRun,
         deadlineMs: (args as { timeoutMs?: number }).timeoutMs ?? RUN_LUAU_DEADLINE_MS,
+        context: (args as { context?: "plugin" | "server" }).context,
       }),
   );
 }

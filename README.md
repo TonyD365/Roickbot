@@ -138,9 +138,15 @@ npm start --workspace packages/desktop
 **Phase 2 (make-graphics):** `build_parts`, `set_appearance`, `edit_terrain`, `set_lighting`,
 `insert_decal`, `insert_model`, `build_gui`.
 
-**Phase 3 (Bot vision & self-test):** `bot_spawn`, `bot_despawn`, `bot_move`, `bot_look`,
-`bot_state`, `bot_see`. While a test is running, project-editing tools are locked (`RUNTIME_LOCKED`) —
-the run phase is read-only; reads, `bot_*`, `run_luau` and `get_console_output` stay available.
+**Phase 3 (Bot vision & self-test):** `bot_spawn` (with `asPlayer` to tag it for player-based
+systems), `bot_despawn`, `bot_move`, `bot_look`, `bot_state`, `bot_see`. While a test is running,
+project-editing tools are locked (`RUNTIME_LOCKED`) — the run phase is read-only; reads, `bot_*`,
+`run_luau`, `fire_signal` and `get_console_output` stay available.
+
+**Runtime server agent & events:** `start_test` injects a server-context agent into the running game,
+so `run_luau` gains `context:"server"` (real `IsServer()`/`IsRunning()`), `fire_signal` can trigger
+server-side listeners (RemoteEvent/BindableEvent/ProximityPrompt/network ownership), and
+`wait_for_event` blocks until the test's state changes instead of polling.
 
 **Search, tags & surgical edits:** `edit_script_lines` (line-range edits), `find_instances`,
 `search_by_property`, `search_scripts` (grep all script source) and `get_script_info` (inspect a
@@ -350,9 +356,13 @@ npm start --workspace packages/desktop
 **第二阶段（做图）：** `build_parts`、`set_appearance`、`edit_terrain`、`set_lighting`、
 `insert_decal`、`insert_model`、`build_gui`。
 
-**第三阶段（Bot 视觉 + 自我测试）：** `bot_spawn`、`bot_despawn`、`bot_move`、`bot_look`、
-`bot_state`、`bot_see`。游戏运行时,工程编辑类工具被锁(`RUNTIME_LOCKED`)——运行态只读;读取、
-`bot_*`、`run_luau`、`get_console_output` 仍可用。
+**第三阶段（Bot 视觉 + 自我测试）：** `bot_spawn`（`asPlayer` 可打标签给基于玩家的系统用）、
+`bot_despawn`、`bot_move`、`bot_look`、`bot_state`、`bot_see`。游戏运行时,工程编辑类工具被锁
+(`RUNTIME_LOCKED`)——运行态只读;读取、`bot_*`、`run_luau`、`fire_signal`、`get_console_output` 仍可用。
+
+**运行时 server agent + 事件：** `start_test` 会往运行中的游戏注入一个 server 上下文的 agent，于是
+`run_luau` 多了 `context:"server"`（真实的 `IsServer()`/`IsRunning()`）、`fire_signal` 能触发服务器端监听
+（RemoteEvent/BindableEvent/ProximityPrompt/网络所有权），`wait_for_event` 则可阻塞等测试状态变化而不用轮询。
 
 **搜索 / 标签 / 行级编辑：** `edit_script_lines`（按行区间改脚本）、`find_instances`、
 `search_by_property`、`search_scripts`（grep 所有脚本源码）、`get_script_info`（查看脚本"文件"属性——
