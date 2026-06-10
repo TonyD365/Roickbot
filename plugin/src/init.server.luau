@@ -133,7 +133,10 @@ local function pollLoop()
 			running = false
 			refreshButton()
 		else
-			setStatus("Unexpected status: " .. tostring(code))
+			-- 其它状态（如偶发 5xx）：退避后重试，别空转刷爆请求。
+			setStatus("Unexpected status: " .. tostring(code) .. " — retrying…")
+			task.wait(backoff)
+			backoff = math.min(backoff * 2, Config.PollBackoffMax)
 		end
 	end
 end
@@ -157,11 +160,29 @@ local function connect()
 			placeId = game.PlaceId,
 			tools = Dispatcher.toolNames(),
 		}
-		local ok, resp = pcall(Net.handshake, baseUrl(), token, info)
-		if not ok or (resp and resp.StatusCode ~= 200) then
+		-- 握手带退避重试：单次网络抖动/桌面端刚启动都不该直接放弃。
+		local done = false
+		local attempt = 0
+		while running and not done and attempt < 5 do
+			attempt += 1
+			local ok, resp = pcall(Net.handshake, baseUrl(), token, info)
+			if ok and resp and resp.StatusCode == 200 then
+				done = true
+			elseif ok and resp and (resp.StatusCode == 401 or resp.StatusCode == 403) then
+				-- 鉴权失败不是抖动，重试无意义。
+				running = false
+				refreshButton()
+				setStatus("Handshake rejected (" .. tostring(resp.StatusCode) .. "). Check the token in the app.")
+				return
+			else
+				setStatus("Handshake attempt " .. attempt .. " failed; retrying…")
+				task.wait(math.min(2 ^ attempt * 0.5, 8)) -- 1s,2s,4s,8s,8s
+			end
+		end
+		if not done then
 			running = false
 			refreshButton()
-			setStatus("Handshake failed. Check the desktop app, token, and HttpService.")
+			setStatus("Handshake failed after retries. Check the desktop app is running and HttpService is enabled.")
 			return
 		end
 		pollLoop()
@@ -226,9 +247,16 @@ do
 	end)
 
 	-- 把运行时报错也推成事件，wait_for_event 可一次等到"出错了"。
+	-- 节流：最多每秒 1 条，避免错误风暴刷爆 HttpService 把长轮询挤掉（那会导致掉线）。
 	local LogService = game:GetService("LogService")
+	local lastErrAt = -1
 	LogService.MessageOut:Connect(function(message: string, messageType: Enum.MessageType)
 		if running and messageType == Enum.MessageType.MessageError then
+			local now = os.clock()
+			if now - lastErrAt < 1 then
+				return
+			end
+			lastErrAt = now
 			pcall(Net.event, baseUrl(), getToken(), { type = "output", messageType = "Error", message = message })
 		end
 	end)
