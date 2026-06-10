@@ -23,7 +23,13 @@ export function registerRuntimeTools(server: McpServer, ctx: ToolContext): void 
         method: z
           .string()
           .describe('Method to call, e.g. "FireAllClients", "Fire", "FireClient", "InputHoldBegin".'),
-        args: z.array(z.any()).optional().describe("Arguments to pass to the method (JSON-serialized values)."),
+        args: z
+          .array(z.any())
+          .optional()
+          .describe(
+            'Arguments for the method. Plain JSON values pass through; pass an Instance as {"$path":"Players/Foo"} ' +
+              'and a Vector3 as {"$Vector3":[x,y,z]}. E.g. FireClient(player): [{"$path":"Players/ClaudeBot"}, 42].',
+          ),
       },
     },
     async (args) => forward(ctx, "fire_signal", args, { context: "server" }),

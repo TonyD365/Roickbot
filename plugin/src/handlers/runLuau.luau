@@ -4,28 +4,15 @@
 
 local Safety = require(script.Parent.Parent.Safety)
 local Serialize = require(script.Parent.Parent.Serialize)
+local Text = require(script.Parent.Parent.Text)
 local ServerStorage = game:GetService("ServerStorage")
 
 local M = {}
 
--- 判断是否像"语句块"（用于 returnExpression：只有单表达式才自动包 return）。
-local function looksLikeStatements(src: string): boolean
-	if string.find(src, "[\n;]") then
-		return true
-	end
-	local trimmed = (string.gsub(src, "^%s+", ""))
-	for _, kw in ipairs({ "local", "return", "for", "while", "if", "do", "function", "repeat" }) do
-		if string.sub(trimmed, 1, #kw + 1) == kw .. " " or trimmed == kw then
-			return true
-		end
-	end
-	return false
-end
-
 function M.run_luau(args: any)
 	local src = args.source or ""
 	-- returnExpression：仅当真是单表达式时才包 return，避免把多语句代码包坏。
-	if args.returnExpression and not looksLikeStatements(src) then
+	if args.returnExpression and not Text.looksLikeStatements(src) then
 		src = "return (" .. src .. ")"
 	end
 

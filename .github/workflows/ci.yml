@@ -45,10 +45,32 @@ jobs:
         run: npm run smoke --workspace packages/desktop
 
   plugin:
-    name: Build Studio plugin (Rojo)
+    name: Build & test Studio plugin (Rojo + Lune)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Install Lune (headless Luau runtime for unit tests)
+        run: |
+          curl -sSL -o lune.zip https://github.com/lune-org/lune/releases/download/v0.8.9/lune-0.8.9-linux-x86_64.zip
+          unzip -o lune.zip lune
+          chmod +x lune
+          sudo mv lune /usr/local/bin/lune
+          lune --version
+      - name: Install Luau (parse / syntax check)
+        run: |
+          curl -sSL -o luau.zip https://github.com/luau-lang/luau/releases/latest/download/luau-ubuntu.zip
+          unzip -o luau.zip luau-compile
+          chmod +x luau-compile
+          sudo mv luau-compile /usr/local/bin/luau-compile
+      - name: Parse-check all plugin Luau
+        run: |
+          set -e
+          find plugin/src -name '*.luau' -print0 | while IFS= read -r -d '' f; do
+            echo "parse $f"
+            luau-compile --binary "$f" > /dev/null
+          done
+      - name: Unit tests (Lune)
+        run: lune run plugin/tests/text.test.luau
       - name: Install Rojo
         run: |
           curl -sSL -o rojo.zip https://github.com/rojo-rbx/rojo/releases/download/v7.4.4/rojo-7.4.4-linux-x86_64.zip

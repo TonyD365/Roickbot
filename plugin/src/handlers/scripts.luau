@@ -1,6 +1,7 @@
 -- 脚本源码读写 handler（用 ScriptEditorService）。
 
 local Safety = require(script.Parent.Parent.Safety)
+local Text = require(script.Parent.Parent.Text)
 local ScriptEditorService = game:GetService("ScriptEditorService")
 
 local M = {}
@@ -75,14 +76,15 @@ function M.search_scripts(args: any)
 	end
 	local caseSensitive = args.caseSensitive == true
 	local maxResults = args.maxResults or 200
+	local cursor = args.cursor or 0 -- 跳过前 cursor 个匹配（分页）。
 	local needle = if caseSensitive then args.query else string.lower(args.query)
 
 	local files = {}
-	local total = 0
+	local collected = 0 -- 本页已收集的匹配数。
+	local seen = 0 -- 已遇到的匹配总数（含被 cursor 跳过的）。
 	local truncated = false
 	for _, d in ipairs(root:GetDescendants()) do
-		if total >= maxResults then
-			truncated = true
+		if truncated then
 			break
 		end
 		if d:IsA("LuaSourceContainer") and pcall(Safety.assertReadable, d) then
@@ -94,11 +96,14 @@ function M.search_scripts(args: any)
 					lineNo += 1
 					local hay = if caseSensitive then line else string.lower(line)
 					if string.find(hay, needle, 1, true) then
-						table.insert(matches, { line = lineNo, text = line })
-						total += 1
-						if total >= maxResults then
-							truncated = true
-							break
+						seen += 1
+						if seen > cursor then
+							table.insert(matches, { line = lineNo, text = line })
+							collected += 1
+							if collected >= maxResults then
+								truncated = true
+								break
+							end
 						end
 					end
 				end
@@ -108,7 +113,11 @@ function M.search_scripts(args: any)
 			end
 		end
 	end
-	return { query = args.query, totalMatches = total, truncated = truncated, files = files }
+	local result: { [string]: any } = { query = args.query, matchCount = collected, truncated = truncated, files = files }
+	if truncated then
+		result.nextCursor = cursor + collected
+	end
+	return result
 end
 
 -- 查看脚本"文件"的属性（不返回完整源码），便于调试为何没执行。
@@ -156,15 +165,6 @@ function M.get_script_info(args: any)
 	return info
 end
 
--- 把源码按换行拆成行（保留空行）。
-local function splitLines(src: string): { string }
-	local lines = {}
-	for line in (src .. "\n"):gmatch("(.-)\n") do
-		table.insert(lines, line)
-	end
-	return lines
-end
-
 -- 行级编辑：替换 / 插入 / 删除指定行区间，避免整源替换。
 function M.edit_script_lines(args: any, env: any)
 	local inst = Safety.resolveOrFail(args.path)
@@ -181,7 +181,7 @@ function M.edit_script_lines(args: any, env: any)
 		src = if ok then s else (inst :: any).Source
 	end
 
-	local lines = splitLines(src)
+	local lines = Text.splitLines(src)
 	local total = #lines
 	local mode = args.mode or "replace"
 	local startLine = args.startLine
@@ -194,25 +194,8 @@ function M.edit_script_lines(args: any, env: any)
 		Safety.fail("INVALID_ARGS", "endLine out of range (" .. startLine .. ".." .. total .. ")")
 	end
 
-	local replacementLines = if args.replacement then splitLines(args.replacement) else {}
-
-	local out = {}
-	-- 头部：startLine 之前的行。
-	for i = 1, startLine - 1 do
-		table.insert(out, lines[i])
-	end
-	-- 中段：根据 mode 决定。
-	if mode ~= "delete" then
-		for _, l in ipairs(replacementLines) do
-			table.insert(out, l)
-		end
-	end
-	-- 尾部：insert 模式从 startLine 起保留；否则从 endLine+1 起。
-	local resumeFrom = if mode == "insert" then startLine else endLine + 1
-	for i = resumeFrom, total do
-		table.insert(out, lines[i])
-	end
-
+	local replacementLines = if args.replacement then Text.splitLines(args.replacement) else {}
+	local out = Text.splice(lines, startLine, endLine, mode, replacementLines)
 	local newSource = table.concat(out, "\n")
 
 	if env.dryRun then

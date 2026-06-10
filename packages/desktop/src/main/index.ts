@@ -18,6 +18,7 @@ interface CoreStatus {
   running: boolean;
   port: number;
   pluginConnected: boolean;
+  agentConnected: boolean;
   claudeConnected: boolean;
   mcpClient: string | null;
   queueDepth: number;
@@ -105,6 +106,9 @@ function registerIpc(): void {
     return service.getStatus();
   });
   ipcMain.handle("rotate-token", async () => needService().rotateToken());
+  ipcMain.handle("get-activity", (_e, limit?: number) =>
+    service ? service.getRecentActivity(limit ?? 30) : { commands: [], events: [] },
+  );
 
   // "Install MCP config"：按所选客户端的正确格式写入。
   // 路径固定的客户端(Claude/Cursor/Gemini)给「自动安装 / 选位置」二选一；

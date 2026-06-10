@@ -12,7 +12,7 @@ optional).
 | Tool | Purpose |
 | --- | --- |
 | `health` | Server + plugin connection status. Call first. |
-| `get_tree` | Instance tree under a path (`rootPath`, `maxDepth`, `classWhitelist`, `excludeClassWhitelist` to skip e.g. heavy `Model` subtrees and keep payloads small). |
+| `get_tree` | Instance tree under a path (`rootPath`, `maxDepth`, `classWhitelist`, `excludeClassWhitelist` to skip e.g. heavy `Model` subtrees, `maxNodes` safety cap → `truncated:true`). Returns `{root, nodeCount, truncated}`. |
 | `get_children` | Direct children of an instance (lazy expansion). |
 | `view_elements` | Detailed view of specific elements by `paths` or `classNameFilter` (+ `includeSource` for scripts). |
 | `get_properties` / `set_properties` | Read / write properties. |
@@ -47,8 +47,8 @@ tools can act as the server (which the plugin context can't):
 | Tool | Purpose |
 | --- | --- |
 | `run_luau` with `context:"server"` | Run Luau **in the running game's server context** (real `IsServer()`/`IsRunning()`). Needs `start_test`. Default `context:"plugin"` runs in the edit/plugin VM as before. |
-| `fire_signal` | Call a method on an instance in server context — e.g. a RemoteEvent's `FireAllClients`/`FireClient`, a BindableEvent's `Fire`, a `ProximityPrompt`'s `InputHoldBegin`/`InputHoldEnd`, or `BasePart:SetNetworkOwner`. Use it to trigger server-side listeners. |
-| `wait_for_event` | Block until Studio pushes the next event (e.g. `runState` changes / the test stopping), instead of polling `get_run_state`. Returns the event or `{timedOut:true}`. |
+| `fire_signal` | Call a method on an instance in server context — e.g. a RemoteEvent's `FireAllClients`/`FireClient`, a BindableEvent's `Fire`, a `ProximityPrompt`'s `InputHoldBegin`/`InputHoldEnd`, or `BasePart:SetNetworkOwner`. Pass instances as `{"$path":"Players/Foo"}` and Vector3 as `{"$Vector3":[x,y,z]}` in `args`. Use it to trigger server-side listeners. |
+| `wait_for_event` | Block until Studio pushes the next event, instead of polling. Event `types`: `runState` (Edit/Running/Paused changes — catches the test stopping), `output` (runtime `Error` messages), `agentState` (runtime agent online). Returns the event or `{timedOut:true}`. |
 
 > The agent only exists **while a test is running** and is removed on `stop_test`. `context:"server"`
 > tools return a clear error if no test is running. There is **no client context** in Run mode (no
@@ -65,9 +65,9 @@ tools can act as the server (which the plugin context can't):
 | Tool | Purpose |
 | --- | --- |
 | `edit_script_lines` | Edit a line range of a script (`replace` / `insert` / `delete`) instead of replacing the whole source. |
-| `find_instances` | Search the DataModel by `name` (contains/exact) and/or `className` (`:IsA`), optional `rootPath`/`limit`. |
+| `find_instances` | Search the DataModel by `name` (contains/exact) and/or `className` (`:IsA`), optional `rootPath`/`limit`/`cursor`. Paged: returns `nextCursor` when `truncated`. |
 | `search_by_property` | Find instances where a `property` equals/contains a `value` (e.g. `Anchored=false`, `Material=Neon`). |
-| `search_scripts` | Grep across all script sources for a `query`; returns matching scripts + line numbers + line text. |
+| `search_scripts` | Grep across all script sources for a `query`; returns matching scripts + line numbers + line text. Paged via `maxResults`/`cursor` → `nextCursor`. |
 | `get_script_info` | A script "file"'s info: class, path, line/char count, `Enabled`/`Disabled`, `RunContext`, attributes (no source). |
 | `get_tagged` / `get_tags` | List instances with a CollectionService tag / list an instance's tags. |
 | `add_tag` / `remove_tag` | Add / remove a CollectionService tag (mutating, undoable). |

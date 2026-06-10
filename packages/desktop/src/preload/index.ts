@@ -9,6 +9,7 @@ const api = {
   start: () => ipcRenderer.invoke("start-service"),
   stop: () => ipcRenderer.invoke("stop-service"),
   rotateToken: () => ipcRenderer.invoke("rotate-token"),
+  getActivity: (limit?: number) => ipcRenderer.invoke("get-activity", limit),
   writeConfig: (client?: string) => ipcRenderer.invoke("write-config", client),
   installPlugin: () => ipcRenderer.invoke("install-plugin"),
   openExternal: (url: string) => ipcRenderer.invoke("open-external", url),

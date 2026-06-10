@@ -42,6 +42,17 @@ const DEFAULT_DEADLINE_MS = 15_000;
 const DEFAULT_POLL_TIMEOUT_MS = 25_000;
 /** 超过该时长没有 poll，则认为插件离线。 */
 const PLUGIN_OFFLINE_MS = 40_000;
+const LOG_MAX = 50;
+
+/** 命令日志条目（供桌面 App 的活动面板展示）。 */
+export interface CommandLogEntry {
+  id: string;
+  tool: string;
+  channel: string;
+  at: number;
+  ok?: boolean;
+  error?: string;
+}
 
 export class CommandQueue {
   private pending: CommandEnvelope[] = [];
@@ -52,8 +63,28 @@ export class CommandQueue {
   private connectedSessionId: string | null = null;
   /** 插件 handshake 上报的工具集（用于检测版本不一致）；null 表示未知（旧插件）。 */
   private pluginTools: Set<string> | null = null;
+  /** 命令日志（最近 LOG_MAX 条）。 */
+  private log: CommandLogEntry[] = [];
+  private logById = new Map<string, CommandLogEntry>();
 
-  constructor(private readonly pollTimeoutMs: number = DEFAULT_POLL_TIMEOUT_MS) {}
+  constructor(
+    private readonly pollTimeoutMs: number = DEFAULT_POLL_TIMEOUT_MS,
+    private readonly channel: string = "plugin",
+  ) {}
+
+  /** 最近的命令日志（最新在前）。 */
+  recentCommands(n = LOG_MAX): CommandLogEntry[] {
+    return this.log.slice(-n).reverse();
+  }
+
+  private record(entry: CommandLogEntry): void {
+    this.log.push(entry);
+    this.logById.set(entry.id, entry);
+    if (this.log.length > LOG_MAX) {
+      const dropped = this.log.shift();
+      if (dropped) this.logById.delete(dropped.id);
+    }
+  }
 
   /** 由 handshake 调用，标记某个插件会话已配对成功。 */
   setConnectedSession(sessionId: string): void {
@@ -97,12 +128,19 @@ export class CommandQueue {
       protocol: PROTOCOL_VERSION,
     };
 
+    this.record({ id: env.id, tool, channel: this.channel, at: Date.now() });
+
     return new Promise<unknown>((resolve, reject) => {
       const timer = setTimeout(() => {
         this.inflight.delete(env.id);
         // 同时尝试从 pending 移除（若还没被取走）。
         const idx = this.pending.findIndex((e) => e.id === env.id);
         if (idx >= 0) this.pending.splice(idx, 1);
+        const entry = this.logById.get(env.id);
+        if (entry) {
+          entry.ok = false;
+          entry.error = "timed out";
+        }
         reject(new Error(`Timed out waiting for Studio plugin to run "${tool}"`));
       }, env.deadlineMs + 2_000);
 
@@ -155,6 +193,11 @@ export class CommandQueue {
     if (!entry) return false; // 迟到或未知 id，丢弃。
     this.inflight.delete(res.id);
     clearTimeout(entry.timer);
+    const logEntry = this.logById.get(res.id);
+    if (logEntry) {
+      logEntry.ok = res.ok;
+      if (!res.ok) logEntry.error = res.error?.message ?? res.error?.code;
+    }
     if (res.ok) {
       entry.resolve(res.result ?? null);
     } else {

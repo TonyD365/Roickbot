@@ -33,6 +33,11 @@
       .banner { background: #3ba55d; color: #fff; border-radius: 8px; padding: 10px 14px; margin-bottom: 14px;
         display: flex; align-items: center; justify-content: space-between; }
       .error { background: #ed4245; }
+      .activity { max-height: 160px; overflow-y: auto; margin-top: 8px; }
+      .ev { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 11px;
+        padding: 3px 0; border-bottom: 1px solid #232428; display: flex; gap: 8px; }
+      .ev .t { color: #6b7178; white-space: nowrap; }
+      .ev .ok { color: #3ba55d; } .ev .bad { color: #ed4245; } .ev .info { color: #00a8fc; }
     </style>
   </head>
   <body>
@@ -63,6 +68,9 @@
         <button id="installPlugin" class="link">Install plugin</button>
       </div>
       <div class="row">
+        <div><span id="agentDot" class="dot off"></span><span id="agentText">Runtime agent off (starts with a test)</span></div>
+      </div>
+      <div class="row">
         <div><span id="claudeDot" class="dot off"></span><span id="claudeText">Claude Code not connected</span></div>
         <div style="display:flex;gap:6px;align-items:center;">
           <select id="clientSelect" class="secondary" title="Choose your AI client">
@@ -88,6 +96,11 @@
         In Roblox Studio: open the Claude Bridge plugin, paste this token, and click Connect.
         Make sure HTTP requests are enabled (<code>game:GetService("HttpService").HttpEnabled = true</code>).
       </div>
+    </div>
+
+    <div class="card">
+      <div class="label">Activity (recent commands &amp; events)</div>
+      <div id="activity" class="activity"><div class="small">No activity yet.</div></div>
     </div>
 
     <div id="msg" class="small"></div>

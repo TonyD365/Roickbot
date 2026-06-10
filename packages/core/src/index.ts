@@ -80,8 +80,8 @@ export class CoreService extends EventEmitter {
   async start(): Promise<void> {
     if (this.running) return;
     this.token = await loadOrCreateToken(this.tokenPath);
-    this.queue = new CommandQueue();
-    this.agentQueue = new CommandQueue();
+    this.queue = new CommandQueue(undefined, "plugin");
+    this.agentQueue = new CommandQueue(undefined, "agent");
     this.confirm = new ConfirmStore();
     this.events = new EventBus();
     this.bridge = new BridgeServer({
@@ -115,6 +115,15 @@ export class CoreService extends EventEmitter {
     this.events = null;
     this.running = false;
     this.emit("status", this.getStatus());
+  }
+
+  /** 最近的活动：命令日志（两通道合并，最新在前）+ 事件。供桌面 App 展示。 */
+  getRecentActivity(limit = 30): { commands: unknown[]; events: unknown[] } {
+    const cmds = [
+      ...(this.queue?.recentCommands(limit) ?? []),
+      ...(this.agentQueue?.recentCommands(limit) ?? []),
+    ].sort((a, b) => b.at - a.at).slice(0, limit);
+    return { commands: cmds, events: (this.events?.recent(undefined, limit) ?? []).slice().reverse() };
   }
 
   /** 轮换 token（需重新配对 + 重写 Claude Code 配置）。 */

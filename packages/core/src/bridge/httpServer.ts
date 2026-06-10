@@ -183,6 +183,7 @@ export class BridgeServer {
     if (info.role === "server-agent") {
       // 运行时 agent 上线（无需 UI 通知，不影响插件配对状态）。
       this.opts.agentQueue.setConnectedSession(info.sessionId);
+      this.opts.events.publish({ type: "agentState", state: "online" });
     } else {
       this.opts.queue.setConnectedSession(info.sessionId);
       this.opts.queue.setPluginTools(info.tools);

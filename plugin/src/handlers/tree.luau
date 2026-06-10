@@ -17,13 +17,19 @@ local function isExcluded(inst: Instance, exclude: { string }?): boolean
 	return false
 end
 
-local function nodeOf(inst: Instance, depth: number, maxDepth: number, whitelist: { string }?, exclude: { string }?)
+-- ctr：共享计数器 { n = 已生成节点数, max = 上限或 math.huge, hit = 是否触顶 }。
+local function nodeOf(inst: Instance, depth: number, maxDepth: number, whitelist: { string }?, exclude: { string }?, ctr: any)
 	local children = {}
 	if depth < maxDepth then
 		for _, c in ipairs(inst:GetChildren()) do
+			if ctr.n >= ctr.max then
+				ctr.hit = true
+				break
+			end
 			local include = (not whitelist or table.find(whitelist, c.ClassName)) and not isExcluded(c, exclude)
 			if include then
-				table.insert(children, nodeOf(c, depth + 1, maxDepth, whitelist, exclude))
+				ctr.n += 1
+				table.insert(children, nodeOf(c, depth + 1, maxDepth, whitelist, exclude, ctr))
 			end
 		end
 	end
@@ -42,7 +48,9 @@ function M.get_tree(args: any)
 		Safety.assertReadable(root)
 	end
 	local maxDepth = args.maxDepth or 3
-	return nodeOf(root, 0, maxDepth, args.classWhitelist, args.excludeClassWhitelist)
+	local ctr = { n = 0, max = args.maxNodes or math.huge, hit = false }
+	local tree = nodeOf(root, 0, maxDepth, args.classWhitelist, args.excludeClassWhitelist, ctr)
+	return { root = tree, nodeCount = ctr.n, truncated = ctr.hit }
 end
 
 function M.get_children(args: any)

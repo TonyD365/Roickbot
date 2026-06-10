@@ -71,6 +71,28 @@ local function ser(v)
 	return tostring(v)
 end
 
+-- 反序列化方法参数：支持把 { ["$path"]="Players/Foo" } 转成 Instance、{ ["$Vector3"]={x,y,z} } 转成 Vector3。
+local function deArg(v)
+	if type(v) == "table" then
+		if type(v["$path"]) == "string" then
+			local inst = resolve(v["$path"])
+			if not inst then
+				error("PATH_NOT_FOUND: " .. v["$path"], 0)
+			end
+			return inst
+		elseif type(v["$Vector3"]) == "table" then
+			local a = v["$Vector3"]
+			return Vector3.new(a[1] or 0, a[2] or 0, a[3] or 0)
+		end
+		local out = {}
+		for k, val in pairs(v) do
+			out[k] = deArg(val)
+		end
+		return out
+	end
+	return v
+end
+
 local handlers = {}
 
 function handlers.run_luau(args)
@@ -112,8 +134,12 @@ function handlers.fire_signal(args)
 	if type(fn) ~= "function" then
 		error("No such method '" .. tostring(method) .. "' on " .. inst.ClassName, 0)
 	end
-	local callArgs = args.args or {}
-	local packed = table.pack(pcall(fn, inst, table.unpack(callArgs)))
+	local raw = args.args or {}
+	local callArgs = {}
+	for i, v in ipairs(raw) do
+		callArgs[i] = deArg(v)
+	end
+	local packed = table.pack(pcall(fn, inst, table.unpack(callArgs, 1, #raw)))
 	if not packed[1] then
 		error(tostring(packed[2]), 0)
 	end
