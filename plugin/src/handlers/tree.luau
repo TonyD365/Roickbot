@@ -5,12 +5,25 @@ local Properties = require(script.Parent.properties)
 
 local M = {}
 
-local function nodeOf(inst: Instance, depth: number, maxDepth: number, whitelist: { string }?)
+local function isExcluded(inst: Instance, exclude: { string }?): boolean
+	if not exclude then
+		return false
+	end
+	for _, cls in ipairs(exclude) do
+		if inst.ClassName == cls or inst:IsA(cls) then
+			return true
+		end
+	end
+	return false
+end
+
+local function nodeOf(inst: Instance, depth: number, maxDepth: number, whitelist: { string }?, exclude: { string }?)
 	local children = {}
 	if depth < maxDepth then
 		for _, c in ipairs(inst:GetChildren()) do
-			if not whitelist or table.find(whitelist, c.ClassName) then
-				table.insert(children, nodeOf(c, depth + 1, maxDepth, whitelist))
+			local include = (not whitelist or table.find(whitelist, c.ClassName)) and not isExcluded(c, exclude)
+			if include then
+				table.insert(children, nodeOf(c, depth + 1, maxDepth, whitelist, exclude))
 			end
 		end
 	end
@@ -29,7 +42,7 @@ function M.get_tree(args: any)
 		Safety.assertReadable(root)
 	end
 	local maxDepth = args.maxDepth or 3
-	return nodeOf(root, 0, maxDepth, args.classWhitelist)
+	return nodeOf(root, 0, maxDepth, args.classWhitelist, args.excludeClassWhitelist)
 end
 
 function M.get_children(args: any)

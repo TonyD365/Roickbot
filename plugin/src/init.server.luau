@@ -151,7 +151,12 @@ local function connect()
 	refreshButton()
 	setStatus("Connecting…")
 	task.spawn(function()
-		local info = { pluginVersion = Config.PluginVersion, sessionId = sessionId, placeId = game.PlaceId }
+		local info = {
+			pluginVersion = Config.PluginVersion,
+			sessionId = sessionId,
+			placeId = game.PlaceId,
+			tools = Dispatcher.toolNames(),
+		}
 		local ok, resp = pcall(Net.handshake, baseUrl(), token, info)
 		if not ok or (resp and resp.StatusCode ~= 200) then
 			running = false

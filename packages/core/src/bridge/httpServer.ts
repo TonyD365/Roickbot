@@ -172,6 +172,7 @@ export class BridgeServer {
   private async handleHandshake(req: IncomingMessage, res: ServerResponse): Promise<void> {
     const info = (await readJsonBody(req)) as HandshakeInfo;
     this.opts.queue.setConnectedSession(info.sessionId);
+    this.opts.queue.setPluginTools(info.tools);
     this.opts.onHandshake?.(info);
     res.writeHead(200, { "content-type": "application/json" });
     res.end(

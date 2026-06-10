@@ -59,6 +59,19 @@ export async function forward(
       isError: true,
     };
   }
+  if (!ctx.queue.supportsTool(tool)) {
+    return {
+      content: [
+        {
+          type: "text",
+          text:
+            `The connected Studio plugin doesn't implement "${tool}". The installed plugin is older than this ` +
+            `app — reinstall it via the desktop app's "Install plugin" button, then reconnect in Studio.`,
+        },
+      ],
+      isError: true,
+    };
+  }
   try {
     const result = await ctx.queue.dispatch(tool, args, opts);
     return jsonResult(result);

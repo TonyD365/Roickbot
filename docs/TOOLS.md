@@ -12,7 +12,7 @@ optional).
 | Tool | Purpose |
 | --- | --- |
 | `health` | Server + plugin connection status. Call first. |
-| `get_tree` | Instance tree under a path (`rootPath`, `maxDepth`, `classWhitelist`). |
+| `get_tree` | Instance tree under a path (`rootPath`, `maxDepth`, `classWhitelist`, `excludeClassWhitelist` to skip e.g. heavy `Model` subtrees and keep payloads small). |
 | `get_children` | Direct children of an instance (lazy expansion). |
 | `view_elements` | Detailed view of specific elements by `paths` or `classNameFilter` (+ `includeSource` for scripts). |
 | `get_properties` / `set_properties` | Read / write properties. |
@@ -26,9 +26,9 @@ optional).
 
 | Tool | Purpose |
 | --- | --- |
-| `start_test` / `stop_test` / `pause_test` | Start/stop/pause a play-test via `RunService:Run/Stop/Pause` (Run mode — physics live, no avatar; drive a Bot as the player). |
+| `start_test` / `stop_test` / `pause_test` | Start/stop/pause a play-test via `RunService:Run/Stop/Pause` (Run mode — physics live, no avatar; drive a Bot as the player). `start_test` reads the state back and returns `ok:false` + a `warning` if the place didn't actually enter Running — verify with `get_run_state`. |
 | `get_run_state` | Edit / Running / Paused. |
-| `get_console_output` | Recent Studio Output (prints/warnings/errors) via `LogService`; `count` + `includeTypes` filters. |
+| `get_console_output` | Recent Studio Output (prints/warnings/errors) via `LogService`; `count`, `order` (`newest` default), `includeTypes` filters. |
 
 > Full Play mode (F5, with a player character) has no clean plugin API, so `start_test` uses Run
 > mode + a Bot (Phase 3) as the player.
@@ -72,7 +72,16 @@ across sessions.
 
 | Tool | Purpose |
 | --- | --- |
-| `run_luau` | Run arbitrary Luau in Studio and return the result + prints. Covers anything the other tools don't. Effects are undoable. |
+| `run_luau` | Run arbitrary Luau in Studio and return the result + prints. Multi-line code and top-level `local` work (executed via a temp ModuleScript, not `loadstring`, so it also works in Run mode). Covers anything the other tools don't. Effects are undoable. |
+
+> **`run_luau` context:** it runs in the **plugin** VM, not a server/client runtime. So
+> `RunService:IsServer()` is `false` and `RunService:IsRunning()` reflects the **edit** DataModel.
+> For real server-runtime behaviour during a test, use `start_test` + the `bot_*` tools.
+
+> **Plugin / app version skew:** if the desktop app is newer than the installed Studio plugin, a
+> tool may exist in the app but not in the plugin. The plugin reports its tool list at handshake, so
+> the server returns a clear "reinstall the plugin" message instead of a cryptic error. Reinstall via
+> the app's **Install plugin** button and reconnect.
 
 ## Safety
 
