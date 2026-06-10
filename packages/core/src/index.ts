@@ -6,6 +6,7 @@ import { EventEmitter } from "node:events";
 import { CommandQueue } from "./bridge/commandQueue.js";
 import { ConfirmStore } from "./safety/confirm.js";
 import { BridgeServer } from "./bridge/httpServer.js";
+import { EventBus } from "./bridge/events.js";
 import { Harness } from "./harness/harness.js";
 import { loadOrCreateToken, generateToken } from "./security/auth.js";
 import type { HandshakeInfo } from "./bridge/envelope.js";
@@ -24,6 +25,8 @@ export interface CoreStatus {
   running: boolean;
   port: number;
   pluginConnected: boolean;
+  /** 运行时 server-agent 是否在线（测试运行中才有）。 */
+  agentConnected: boolean;
   claudeConnected: boolean;
   /** 连上来的 MCP 客户端名（如 "claude-code" / "gemini-cli" / "cursor"），未知则 null。 */
   mcpClient: string | null;
@@ -41,7 +44,9 @@ export class CoreService extends EventEmitter {
   private readonly harness: Harness;
   private token = "";
   private queue: CommandQueue | null = null;
+  private agentQueue: CommandQueue | null = null;
   private confirm: ConfirmStore | null = null;
+  private events: EventBus | null = null;
   private bridge: BridgeServer | null = null;
   private running = false;
 
@@ -65,6 +70,7 @@ export class CoreService extends EventEmitter {
       running: this.running,
       port: this.port,
       pluginConnected: this.queue?.isPluginConnected() ?? false,
+      agentConnected: this.agentQueue?.isPluginConnected() ?? false,
       claudeConnected: this.bridge?.mcpActiveRecently() ?? false,
       mcpClient: this.bridge?.getMcpClient()?.name ?? null,
       queueDepth: this.queue?.queueDepth ?? 0,
@@ -75,13 +81,17 @@ export class CoreService extends EventEmitter {
     if (this.running) return;
     this.token = await loadOrCreateToken(this.tokenPath);
     this.queue = new CommandQueue();
+    this.agentQueue = new CommandQueue();
     this.confirm = new ConfirmStore();
+    this.events = new EventBus();
     this.bridge = new BridgeServer({
       port: this.port,
       token: this.token,
       queue: this.queue,
+      agentQueue: this.agentQueue,
       confirm: this.confirm,
       harness: this.harness,
+      events: this.events,
       onHandshake: (info: HandshakeInfo) => {
         this.emit("handshake", info);
         this.emit("status", this.getStatus());
@@ -95,10 +105,14 @@ export class CoreService extends EventEmitter {
   async stop(): Promise<void> {
     if (!this.running) return;
     this.queue?.shutdown();
+    this.agentQueue?.shutdown();
+    this.events?.shutdown();
     await this.bridge?.stop();
     this.bridge = null;
     this.queue = null;
+    this.agentQueue = null;
     this.confirm = null;
+    this.events = null;
     this.running = false;
     this.emit("status", this.getStatus());
   }
@@ -123,3 +137,4 @@ export * from "./security/auth.js";
 export * from "./config/mcpConfig.js";
 export * from "./bridge/envelope.js";
 export { Harness } from "./harness/harness.js";
+export { EventBus } from "./bridge/events.js";

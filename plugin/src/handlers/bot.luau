@@ -85,7 +85,23 @@ function M.bot_spawn(args: any)
 		root.CFrame = CFrame.lookAt(root.Position, Vector3.new(la.X, root.Position.Y, la.Z))
 	end
 
-	return { path = Safety.pathOf(model), rig = rig }
+	local result: { [string]: any } = { path = Safety.pathOf(model), rig = rig }
+
+	-- asPlayer：尽力让 Bot 像"玩家"。注意：Run 模式下没有真客户端，无法造出真正的 Player 实例，
+	-- 所以这里打标签 + 写属性（OwnerUserId 等），供你的玩家系统按标签/属性识别它；
+	-- 配合 run_luau(context:"server") 可设置网络所有权等服务器侧逻辑。
+	if args and args.asPlayer then
+		local CollectionService = game:GetService("CollectionService")
+		CollectionService:AddTag(model, "ClaudePlayer")
+		model:SetAttribute("ClaudeBotAsPlayer", true)
+		model:SetAttribute("ClaudeOwnerUserId", (args.userId :: number?) or -1)
+		result.asPlayer = true
+		result.note = "Tagged 'ClaudePlayer' with OwnerUserId attribute. A real Players instance can't exist in "
+			.. "Run mode (no client), so Players:GetPlayers() won't include it — have player systems recognize the "
+			.. "'ClaudePlayer' tag, or use run_luau(context:'server') for ownership/RemoteEvent logic."
+	end
+
+	return result
 end
 
 function M.bot_despawn()

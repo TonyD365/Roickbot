@@ -34,4 +34,9 @@ function Net.respond(baseUrl: string, token: string, response: any)
 	return request(baseUrl .. "/response", "POST", token, response)
 end
 
+-- 主动上报事件（如运行状态变化），供 MCP 的 wait_for_event 唤醒。
+function Net.event(baseUrl: string, token: string, ev: any)
+	return request(baseUrl .. "/event", "POST", token, ev)
+end
+
 return Net

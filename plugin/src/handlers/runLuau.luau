@@ -1,20 +1,51 @@
 -- 万能逃生舱：运行任意 Luau 代码并返回结果。
+-- 不用 loadstring（Run 模式下 loadstring 不可用），改用临时 ModuleScript + require 执行：
+-- 把代码塞进一个函数体，这样顶层 local、多语句、return 都能正常工作。
 
 local Safety = require(script.Parent.Parent.Safety)
 local Serialize = require(script.Parent.Parent.Serialize)
+local ServerStorage = game:GetService("ServerStorage")
 
 local M = {}
 
+-- 判断是否像"语句块"（用于 returnExpression：只有单表达式才自动包 return）。
+local function looksLikeStatements(src: string): boolean
+	if string.find(src, "[\n;]") then
+		return true
+	end
+	local trimmed = (string.gsub(src, "^%s+", ""))
+	for _, kw in ipairs({ "local", "return", "for", "while", "if", "do", "function", "repeat" }) do
+		if string.sub(trimmed, 1, #kw + 1) == kw .. " " or trimmed == kw then
+			return true
+		end
+	end
+	return false
+end
+
 function M.run_luau(args: any)
-	local src = args.source
-	if args.returnExpression then
+	local src = args.source or ""
+	-- returnExpression：仅当真是单表达式时才包 return，避免把多语句代码包坏。
+	if args.returnExpression and not looksLikeStatements(src) then
 		src = "return (" .. src .. ")"
 	end
-	local fn, loadErr = loadstring(src)
-	if not fn then
-		Safety.fail("LUAU_ERROR", "Compile error: " .. tostring(loadErr))
+
+	local module = Instance.new("ModuleScript")
+	module.Name = "ClaudeRunLuau"
+	module.Source = "return function(...)\n" .. src .. "\nend"
+	module.Parent = ServerStorage
+
+	local okReq, fnOrErr = pcall(require, module)
+	if not okReq then
+		module:Destroy()
+		Safety.fail("LUAU_ERROR", "Compile error: " .. tostring(fnOrErr))
 	end
-	local packed = table.pack(pcall(fn :: any))
+	if type(fnOrErr) ~= "function" then
+		module:Destroy()
+		Safety.fail("LUAU_ERROR", "Internal error wrapping run_luau source")
+	end
+
+	local packed = table.pack(pcall(fnOrErr :: any))
+	module:Destroy()
 	if not packed[1] then
 		Safety.fail("LUAU_ERROR", tostring(packed[2]))
 	end
@@ -22,7 +53,8 @@ function M.run_luau(args: any)
 	for i = 2, packed.n do
 		returns[i - 1] = Serialize.toJson(packed[i])
 	end
-	return { returned = returns }
+	-- 提醒：代码在插件 VM 中执行（非 server/client 运行时上下文）。
+	return { returned = returns, context = "plugin" }
 end
 
 return M

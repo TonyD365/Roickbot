@@ -50,6 +50,8 @@ export class CommandQueue {
   private waiter: { resolve: (env: CommandEnvelope | null) => void; timer: ReturnType<typeof setTimeout> } | null = null;
   private lastPollAt = 0;
   private connectedSessionId: string | null = null;
+  /** 插件 handshake 上报的工具集（用于检测版本不一致）；null 表示未知（旧插件）。 */
+  private pluginTools: Set<string> | null = null;
 
   constructor(private readonly pollTimeoutMs: number = DEFAULT_POLL_TIMEOUT_MS) {}
 
@@ -57,6 +59,19 @@ export class CommandQueue {
   setConnectedSession(sessionId: string): void {
     this.connectedSessionId = sessionId;
     this.lastPollAt = Date.now();
+  }
+
+  /** 记录插件上报的工具集；不传则视为未知（旧插件，跳过预检）。 */
+  setPluginTools(tools: string[] | undefined): void {
+    this.pluginTools = tools && tools.length ? new Set(tools) : null;
+  }
+
+  /**
+   * 插件是否实现某工具。未知（旧插件没上报）时返回 true 以保持兼容，
+   * 让 Dispatcher 的 UNKNOWN_TOOL 兜底。
+   */
+  supportsTool(tool: string): boolean {
+    return this.pluginTools === null || this.pluginTools.has(tool);
   }
 
   /** 插件是否在线（最近有 poll 心跳）。 */
@@ -162,5 +177,6 @@ export class CommandQueue {
     this.inflight.clear();
     this.pending = [];
     this.connectedSessionId = null;
+    this.pluginTools = null;
   }
 }

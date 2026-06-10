@@ -87,6 +87,8 @@ check("tools/list includes get_script_info", listText.includes("get_script_info"
 check("tools/list includes harness_init", listText.includes("harness_init"));
 check("tools/list includes harness_session_start", listText.includes("harness_session_start"));
 check("tools/list includes harness_feature_update", listText.includes("harness_feature_update"));
+check("tools/list includes fire_signal", listText.includes("fire_signal"));
+check("tools/list includes wait_for_event", listText.includes("wait_for_event"));
 
 // 8. 完整命令往返：MCP tools/call -> 队列 -> 模拟插件长轮询 -> 回传结果。
 let pluginRunning = true;
@@ -133,6 +135,42 @@ const featText = await callTool(10, "harness_feature_update", { title: "Smoke fe
 check("harness_feature_update creates a feature locally", featText.includes("Smoke feature") && featText.includes("F1"));
 const statusText = await callTool(11, "harness_status", {});
 check("harness_status reflects the new feature", statusText.includes("Smoke feature"));
+
+// 10. server-agent 通道：模拟 agent 连接（role=agent）并验证 fire_signal 路由到它。
+await fetch(`${base}/handshake`, {
+  method: "POST", headers: authHeaders,
+  body: JSON.stringify({ role: "server-agent", sessionId: "agent-session" }),
+});
+let agentRunning = true;
+const fakeAgent = (async () => {
+  while (agentRunning) {
+    let pr;
+    try {
+      pr = await fetch(`${base}/poll?role=agent&sessionId=agent-session`, { headers: authHeaders });
+    } catch { continue; }
+    if (pr.status === 204) continue;
+    if (pr.status !== 200) break;
+    const env = await pr.json();
+    await fetch(`${base}/response`, {
+      method: "POST", headers: authHeaders,
+      body: JSON.stringify({ id: env.id, ok: true, result: { agent: true, tool: env.tool, args: env.args } }),
+    });
+  }
+})();
+const fsText = await callTool(12, "fire_signal", { path: "ReplicatedStorage/Remote", method: "FireAllClients", args: [1] });
+check("fire_signal routes to the server-agent channel", fsText.includes("agent") && fsText.includes("FireAllClients"));
+agentRunning = false;
+await Promise.race([fakeAgent, new Promise((res) => setTimeout(res, 500))]);
+
+// 11. 事件推送：wait_for_event 阻塞等待，/event 推送后被唤醒。
+const waitPromise = callTool(13, "wait_for_event", { types: ["runState"], timeoutMs: 5000 });
+await new Promise((res) => setTimeout(res, 100));
+await fetch(`${base}/event`, {
+  method: "POST", headers: authHeaders,
+  body: JSON.stringify({ type: "runState", state: "Running" }),
+});
+const evText = await waitPromise;
+check("wait_for_event resolves when /event is pushed", evText.includes("runState") && evText.includes("Running"));
 
 await svc.stop();
 console.log(`\n${pass} passed, ${fail} failed`);

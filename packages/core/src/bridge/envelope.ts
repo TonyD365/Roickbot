@@ -40,4 +40,6 @@ export interface HandshakeInfo {
   pluginVersion: string;
   placeId?: number;
   sessionId: string;
+  /** 插件当前实现的工具名列表（用于检测插件与 App 的版本不一致）。 */
+  tools?: string[];
 }

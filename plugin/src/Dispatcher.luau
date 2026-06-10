@@ -114,12 +114,27 @@ local LOCK_WHILE_RUNNING: { [string]: boolean } = {
 	build_gui = true,
 }
 
+-- 当前插件实现的所有工具名（handshake 时上报给服务器，用于检测版本不一致）。
+function Dispatcher.toolNames(): { string }
+	local names = {}
+	for name in pairs(handlers) do
+		table.insert(names, name)
+	end
+	return names
+end
+
 function Dispatcher.dispatch(env: any): any
 	local response: { [string]: any } = { id = env.id }
 	local handler = handlers[env.tool]
 	if not handler then
 		response.ok = false
-		response.error = { code = "UNKNOWN_TOOL", message = "No handler for tool: " .. tostring(env.tool) }
+		response.error = {
+			code = "UNKNOWN_TOOL",
+			message = "This Studio plugin has no handler for '"
+				.. tostring(env.tool)
+				.. "'. The installed plugin is likely older than the desktop app — reinstall it via the app's "
+				.. "'Install plugin' button, then reconnect in Studio.",
+		}
 		return response
 	end
 

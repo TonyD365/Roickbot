@@ -46,8 +46,12 @@ export function registerPhase1Tools(server: McpServer, ctx: ToolContext): void {
         "to expand large projects lazily.",
       inputSchema: {
         rootPath: z.string().optional().describe('e.g. "Workspace" or "Workspace/Model". Omit for game root.'),
-        maxDepth: z.number().int().min(1).optional().describe("How many levels deep to expand."),
+        maxDepth: z.number().int().min(1).optional().describe("How many levels deep to expand (default 3)."),
         classWhitelist: z.array(z.string()).optional().describe("Only include these class names."),
+        excludeClassWhitelist: z
+          .array(z.string())
+          .optional()
+          .describe('Skip these classes and their subtrees (e.g. ["Model"]) to avoid huge payloads on big maps.'),
       },
     },
     async (args) => forward(ctx, "get_tree", args),
@@ -227,12 +231,17 @@ export function registerPhase1Tools(server: McpServer, ctx: ToolContext): void {
       title: "Start a play-test (Run mode)",
       description:
         "Start the game with RunService:Run() — physics runs live (no avatar; drive a Bot as the player). " +
-        "Full Play mode (F5, with a real character) has no clean plugin API, so this uses Run mode. " +
-        "IMPORTANT: while the game is running, all project-EDITING tools are locked (RUNTIME_LOCKED); " +
-        "only reads, get_console_output, bot_* and run_luau work. Call stop_test before editing again.",
+        "Also injects a server-runtime agent into the running game, enabling run_luau(context:'server'), " +
+        "fire_signal, and wait_for_event. Full Play mode (F5, with a real character) has no clean plugin API, " +
+        "so this uses Run mode. IMPORTANT: while the game is running, all project-EDITING tools are locked " +
+        "(RUNTIME_LOCKED); only reads, get_console_output, bot_*, run_luau and fire_signal work. " +
+        "Call stop_test before editing again.",
       inputSchema: {},
     },
-    async () => forward(ctx, "start_test", {}),
+    async () =>
+      forward(ctx, "start_test", {
+        agent: { port: ctx.serverInfo.port, token: ctx.serverInfo.token },
+      }),
   );
 
   server.registerTool(
@@ -275,6 +284,10 @@ export function registerPhase1Tools(server: McpServer, ctx: ToolContext): void {
         "Use after run_luau or after running the game to see what was logged and to debug errors.",
       inputSchema: {
         count: z.number().int().min(1).optional().describe("Max recent messages to return (default 100)."),
+        order: z
+          .enum(["newest", "oldest"])
+          .optional()
+          .describe('Result order (default "newest" — most recent first, best for spotting fresh errors).'),
         includeTypes: z
           .array(z.enum(["Output", "Info", "Warning", "Error"]))
           .optional()
@@ -292,10 +305,20 @@ export function registerPhase1Tools(server: McpServer, ctx: ToolContext): void {
       description:
         "Run arbitrary Luau code inside Studio and return its result + captured prints. This is the universal " +
         'escape hatch that can do anything the other tools do not cover (use `return <expr>` or returnExpression). ' +
-        "Effects are wrapped in an undo waypoint." + CAUTION,
+        "Multi-line code and top-level `local` are fully supported. NOTE: it runs in the PLUGIN context, not a " +
+        "server/client runtime — so RunService:IsServer() is false and IsRunning() reflects the edit DataModel. " +
+        "For true server-runtime behavior, use start_test + the bot_* tools. Effects are wrapped in an undo waypoint." +
+        CAUTION,
       inputSchema: {
         source: z.string(),
         returnExpression: z.boolean().optional().describe("If true, treat source as an expression to return."),
+        context: z
+          .enum(["plugin", "server"])
+          .optional()
+          .describe(
+            'Where to run: "plugin" (default, edit context) or "server" (inside the running game\'s server ' +
+              "context via the runtime agent — needs start_test first; gives real IsServer()/IsRunning()).",
+          ),
         dryRun: z.boolean().optional(),
         timeoutMs: z.number().int().optional(),
       },
@@ -304,6 +327,7 @@ export function registerPhase1Tools(server: McpServer, ctx: ToolContext): void {
       forward(ctx, "run_luau", args, {
         dryRun: (args as { dryRun?: boolean }).dryRun,
         deadlineMs: (args as { timeoutMs?: number }).timeoutMs ?? RUN_LUAU_DEADLINE_MS,
+        context: (args as { context?: "plugin" | "server" }).context,
       }),
   );
 }

@@ -3,11 +3,18 @@
 import { CommandFailure, CommandQueue } from "../bridge/commandQueue.js";
 import { ConfirmStore } from "../safety/confirm.js";
 import type { Harness } from "../harness/harness.js";
+import type { EventBus } from "../bridge/events.js";
 
 export interface ToolContext {
+  /** 插件通道（编辑态工具）。 */
   queue: CommandQueue;
+  /** 运行时 server-agent 通道（运行中游戏内的 server 上下文）。 */
+  agentQueue: CommandQueue;
   confirm: ConfirmStore;
   harness: Harness;
+  events: EventBus;
+  /** 服务器自身信息（用于把连接信息传给注入的 agent）。 */
+  serverInfo: { port: number; token: string };
 }
 
 /** MCP 工具返回的内容块（仅用到文本）。 */
@@ -44,23 +51,34 @@ export async function forward(
   ctx: ToolContext,
   tool: string,
   args: unknown,
-  opts: { dryRun?: boolean; deadlineMs?: number } = {},
+  opts: { dryRun?: boolean; deadlineMs?: number; context?: "plugin" | "server" } = {},
 ): Promise<ToolResult> {
-  if (!ctx.queue.isPluginConnected()) {
+  const useAgent = opts.context === "server";
+  const queue = useAgent ? ctx.agentQueue : ctx.queue;
+
+  if (!queue.isPluginConnected()) {
+    const text = useAgent
+      ? "The server runtime agent is not connected. Call start_test first — it injects an agent into the " +
+        "running game so server-context tools can run. (The agent only exists while a test is running.)"
+      : "The Roblox Studio plugin is not connected. Open Studio, install/enable the Claude Bridge plugin, " +
+        "and connect it using the token shown in the desktop app.";
+    return { content: [{ type: "text", text }], isError: true };
+  }
+  if (!useAgent && !ctx.queue.supportsTool(tool)) {
     return {
       content: [
         {
           type: "text",
           text:
-            "The Roblox Studio plugin is not connected. Open Studio, install/enable the Claude Bridge plugin, " +
-            "and connect it using the token shown in the desktop app.",
+            `The connected Studio plugin doesn't implement "${tool}". The installed plugin is older than this ` +
+            `app — reinstall it via the desktop app's "Install plugin" button, then reconnect in Studio.`,
         },
       ],
       isError: true,
     };
   }
   try {
-    const result = await ctx.queue.dispatch(tool, args, opts);
+    const result = await queue.dispatch(tool, args, opts);
     return jsonResult(result);
   } catch (e) {
     return errorResult(e);

@@ -2,7 +2,7 @@
 
 local Config = {}
 
-Config.PluginVersion = "0.1.0"
+Config.PluginVersion = "0.2.0"
 Config.Protocol = 1
 Config.DefaultHost = "http://127.0.0.1"
 Config.DefaultPort = 7331

@@ -15,11 +15,16 @@ export function registerPhase3Tools(server: McpServer, ctx: ToolContext): void {
       title: "Spawn the test Bot",
       description:
         "Spawn a controllable Bot (a 'ClaudeBot' rig in Workspace) that acts as the player during a test. " +
-        "Spawn it, then start_test, then drive it with bot_move/bot_look and observe with bot_see.",
+        "Spawn it, then start_test, then drive it with bot_move/bot_look and observe with bot_see. " +
+        "Set asPlayer:true to tag it 'ClaudePlayer' + set an OwnerUserId attribute for player-based systems " +
+        "(note: Run mode has no real client, so it won't appear in Players:GetPlayers() — systems should match " +
+        "the tag, or use run_luau(context:'server') for ownership logic).",
       inputSchema: {
         position: vec3.optional().describe("Spawn position [x,y,z] (default ~[0,5,0])."),
         lookAt: vec3.optional().describe("Face this point on spawn."),
         rig: z.enum(["humanoid", "part"]).optional().describe("humanoid = walkable rig (default); part = a single sensor part."),
+        asPlayer: z.boolean().optional().describe("Tag as 'ClaudePlayer' + set OwnerUserId for player-based systems."),
+        userId: z.number().optional().describe("OwnerUserId attribute value when asPlayer (default -1)."),
       },
     },
     async (args) => forward(ctx, "bot_spawn", args),
