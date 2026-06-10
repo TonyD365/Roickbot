@@ -55,7 +55,13 @@ export function registerQueryTools(server: McpServer, ctx: ToolContext): void {
         query: z.string().describe("Text to search for."),
         rootPath: z.string().optional().describe("Limit to this subtree (default: whole game)."),
         caseSensitive: z.boolean().optional().describe("Case-sensitive match (default false)."),
-        maxResults: z.number().int().min(1).optional().describe("Max matching lines to return (default 200)."),
+        maxResults: z.number().int().min(1).optional().describe("Max matching lines per page (default 200)."),
+        cursor: z
+          .number()
+          .int()
+          .min(0)
+          .optional()
+          .describe("Skip this many matches (pagination). Use nextCursor from a prior call for the next page."),
       },
     },
     async (args) => forward(ctx, "search_scripts", args),
@@ -88,7 +94,13 @@ export function registerQueryTools(server: McpServer, ctx: ToolContext): void {
         rootPath: z.string().optional().describe("Limit search to this subtree (default: whole game)."),
         matchMode: z.enum(["contains", "exact"]).optional().describe("Name match mode (default contains)."),
         caseSensitive: z.boolean().optional().describe("Case-sensitive name match (default false)."),
-        limit: z.number().int().min(1).optional().describe("Max results (default 200)."),
+        limit: z.number().int().min(1).optional().describe("Max results per page (default 200)."),
+        cursor: z
+          .number()
+          .int()
+          .min(0)
+          .optional()
+          .describe("Skip this many matches (pagination). Use nextCursor from a prior call to get the next page."),
       },
     },
     async (args) => forward(ctx, "find_instances", args),

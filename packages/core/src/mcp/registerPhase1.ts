@@ -52,6 +52,12 @@ export function registerPhase1Tools(server: McpServer, ctx: ToolContext): void {
           .array(z.string())
           .optional()
           .describe('Skip these classes and their subtrees (e.g. ["Model"]) to avoid huge payloads on big maps.'),
+        maxNodes: z
+          .number()
+          .int()
+          .min(1)
+          .optional()
+          .describe("Safety cap on total nodes returned; result has truncated:true if hit (default: unlimited)."),
       },
     },
     async (args) => forward(ctx, "get_tree", args),

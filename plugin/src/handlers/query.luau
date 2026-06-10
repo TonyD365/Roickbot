@@ -27,6 +27,7 @@ function M.find_instances(args: any)
 	local matchMode = args.matchMode or "contains"
 	local caseSensitive = args.caseSensitive == true
 	local limit = args.limit or DEFAULT_LIMIT
+	local cursor = args.cursor or 0 -- 跳过前 cursor 个匹配（分页）。
 
 	if not name and not className then
 		Safety.fail("INVALID_ARGS", "Provide name and/or className")
@@ -38,6 +39,7 @@ function M.find_instances(args: any)
 	end
 
 	local out = {}
+	local seen = 0 -- 已遇到的匹配总数（含被 cursor 跳过的）。
 	local truncated = false
 	for _, d in ipairs(root:GetDescendants()) do
 		local nameOk = true
@@ -57,14 +59,21 @@ function M.find_instances(args: any)
 			classOk = ok and isa or d.ClassName == className
 		end
 		if nameOk and classOk then
-			table.insert(out, summarize(d))
-			if #out >= limit then
-				truncated = true
-				break
+			seen += 1
+			if seen > cursor then
+				table.insert(out, summarize(d))
+				if #out >= limit then
+					truncated = true
+					break
+				end
 			end
 		end
 	end
-	return { count = #out, truncated = truncated, results = out }
+	local result: { [string]: any } = { count = #out, truncated = truncated, results = out }
+	if truncated then
+		result.nextCursor = cursor + #out
+	end
+	return result
 end
 
 -- 按属性值搜索实例（值按字符串比较）。

@@ -224,6 +224,14 @@ do
 			end
 		end
 	end)
+
+	-- 把运行时报错也推成事件，wait_for_event 可一次等到"出错了"。
+	local LogService = game:GetService("LogService")
+	LogService.MessageOut:Connect(function(message: string, messageType: Enum.MessageType)
+		if running and messageType == Enum.MessageType.MessageError then
+			pcall(Net.event, baseUrl(), getToken(), { type = "output", messageType = "Error", message = message })
+		end
+	end)
 end
 
 -- 已配对（存有 token）则开 Studio 自动连接。

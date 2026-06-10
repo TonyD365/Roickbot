@@ -52,9 +52,43 @@
       status.pluginConnected ? "Plugin online (auto-connected)" : "Plugin offline");
     el("installPlugin").classList.toggle("hidden", status.pluginConnected);
 
+    setIndicator("agentDot", "agentText", status.agentConnected ? "on" : "off",
+      status.agentConnected ? "Runtime agent online (test running)" : "Runtime agent off (starts with a test)");
+
     const clientLabel = status.mcpClient ? prettyClient(status.mcpClient) : "MCP client";
     setIndicator("claudeDot", "claudeText", status.claudeConnected ? "on" : "idle",
       status.claudeConnected ? `${clientLabel} connected` : `${clientLabel} not connected`);
+  }
+
+  function fmtTime(ms) {
+    const d = new Date(ms);
+    return d.toTimeString().slice(0, 8);
+  }
+
+  function renderActivity(act) {
+    const box = el("activity");
+    if (!box) return;
+    const rows = [];
+    for (const c of act.commands || []) {
+      const cls = c.ok === false ? "bad" : c.ok === true ? "ok" : "info";
+      const status = c.ok === false ? `✗ ${c.error || "error"}` : c.ok === true ? "✓" : "…";
+      rows.push({ at: c.at, html: `<span class="t">${fmtTime(c.at)}</span><span>${c.channel}: ${c.tool}</span><span class="${cls}">${status}</span>` });
+    }
+    for (const e of act.events || []) {
+      const label = e.type === "runState" ? `event: runState → ${e.state}`
+        : e.type === "output" ? `event: ${e.messageType || "output"}`
+        : `event: ${e.type}`;
+      rows.push({ at: e.at, html: `<span class="t">${fmtTime(e.at)}</span><span class="info">${label}</span>` });
+    }
+    rows.sort((a, b) => b.at - a.at);
+    box.innerHTML = rows.length
+      ? rows.slice(0, 40).map((r) => `<div class="ev">${r.html}</div>`).join("")
+      : '<div class="small">No activity yet.</div>';
+  }
+
+  async function refreshActivity() {
+    if (!running) return;
+    try { renderActivity(await api.getActivity(40)); } catch { /* ignore */ }
   }
 
   // 统一包一层 try/catch，任何错误都弹到界面上，避免"点了没反应"。
@@ -129,7 +163,9 @@
   });
 
   setInterval(refresh, 2500);
+  setInterval(refreshActivity, 2000);
   refresh();
+  refreshActivity();
 
   // 自检：确认 .hidden 真的把元素隐藏了（防 CSS 优先级回归——横幅误显示）。
   if (getComputedStyle(el("updateBanner")).display !== "none") {
