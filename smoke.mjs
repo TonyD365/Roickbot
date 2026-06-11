@@ -1,5 +1,6 @@
-// 烟雾测试：验证桥服务器的鉴权、配对、插件在线检测、以及 MCP initialize。
+// 烟雾测试：验证桥服务器的鉴权、WebSocket 配对、插件在线检测、MCP、命令往返、agent 通道与事件。
 import { CoreService } from "./packages/core/dist/index.js";
+import { WebSocket } from "ws";
 import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -17,6 +18,31 @@ function check(name, cond) {
   if (cond) { pass++; console.log(`  ok  - ${name}`); }
   else { fail++; console.log(`  FAIL- ${name}`); }
 }
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+// 模拟 Studio 端（插件或 agent）通过 WebSocket 连接：握手 + 自动回显命令。
+function fakeStudio(role) {
+  const query = role === "agent" ? "?role=agent" : "";
+  const ws = new WebSocket(`ws://127.0.0.1:${PORT}/ws${query}`, {
+    headers: { Authorization: `Bearer ${token}`, "X-Roblox-MCP": "1" },
+  });
+  ws.on("message", (data) => {
+    const m = JSON.parse(data.toString());
+    if (m.type === "command") {
+      const env = m.payload;
+      ws.send(JSON.stringify({ type: "response", id: env.id, ok: true, result: { echoed: env.tool, args: env.args, role } }));
+    }
+  });
+  const opened = new Promise((res, rej) => { ws.on("open", res); ws.on("error", rej); });
+  const handshake = () =>
+    ws.send(JSON.stringify({
+      type: "handshake",
+      sessionId: `${role}-session`,
+      pluginVersion: "0.2.0",
+      role: role === "agent" ? "server-agent" : undefined,
+    }));
+  return { ws, opened, handshake };
+}
 
 // 1. 无 token -> 401
 let r = await fetch(`${base}/health`, { headers: { "X-Roblox-MCP": "1" } });
@@ -32,18 +58,16 @@ let body = await r.json();
 check("health ok with valid token", r.status === 200 && body.ok === true);
 check("plugin not connected before handshake", body.pluginConnected === false);
 
-// 4. 插件 handshake
-r = await fetch(`${base}/handshake`, {
-  method: "POST", headers: authHeaders,
-  body: JSON.stringify({ pluginVersion: "0.1.0", sessionId: "test-session", placeId: 1 }),
-});
-body = await r.json();
-check("handshake succeeds", r.status === 200 && body.ok === true);
+// 4. 插件 WebSocket 握手
+const plugin = fakeStudio("plugin");
+await plugin.opened;
+plugin.handshake();
+await sleep(150);
 
-// 5. handshake 后 plugin 在线
+// 5. 握手后 plugin 在线
 r = await fetch(`${base}/health`, { headers: authHeaders });
 body = await r.json();
-check("plugin connected after handshake", body.pluginConnected === true);
+check("plugin connected after WS handshake", body.pluginConnected === true);
 
 // 6. MCP initialize
 r = await fetch(`${base}/mcp`, {
@@ -60,69 +84,6 @@ check("MCP initialize returns 200", r.status === 200);
 check("MCP initialize returns a session id", !!sessionId);
 check("MCP initialize advertises server name", text.includes("claude-for-roblox-studio"));
 
-// 7. tools/list（带 session）
-r = await fetch(`${base}/mcp`, {
-  method: "POST",
-  headers: { ...authHeaders, Accept: "application/json, text/event-stream", "mcp-session-id": sessionId ?? "" },
-  body: JSON.stringify({ jsonrpc: "2.0", id: 2, method: "tools/list", params: {} }),
-});
-const listText = await r.text();
-check("tools/list includes create_instance", listText.includes("create_instance"));
-check("tools/list includes view_elements", listText.includes("view_elements"));
-check("tools/list includes start_test", listText.includes("start_test"));
-check("tools/list includes run_luau", listText.includes("run_luau"));
-check("tools/list includes get_console_output", listText.includes("get_console_output"));
-check("tools/list includes build_parts (Phase 2)", listText.includes("build_parts"));
-check("tools/list includes set_lighting (Phase 2)", listText.includes("set_lighting"));
-check("tools/list includes build_gui (Phase 2)", listText.includes("build_gui"));
-check("tools/list includes bot_spawn (Phase 3)", listText.includes("bot_spawn"));
-check("tools/list includes bot_see (Phase 3)", listText.includes("bot_see"));
-check("tools/list includes edit_script_lines", listText.includes("edit_script_lines"));
-check("tools/list includes find_instances", listText.includes("find_instances"));
-check("tools/list includes search_by_property", listText.includes("search_by_property"));
-check("tools/list includes get_tagged", listText.includes("get_tagged"));
-check("tools/list includes add_tag", listText.includes("add_tag"));
-check("tools/list includes search_scripts", listText.includes("search_scripts"));
-check("tools/list includes get_script_info", listText.includes("get_script_info"));
-check("tools/list includes harness_init", listText.includes("harness_init"));
-check("tools/list includes harness_session_start", listText.includes("harness_session_start"));
-check("tools/list includes harness_feature_update", listText.includes("harness_feature_update"));
-check("tools/list includes fire_signal", listText.includes("fire_signal"));
-check("tools/list includes wait_for_event", listText.includes("wait_for_event"));
-
-// 8. 完整命令往返：MCP tools/call -> 队列 -> 模拟插件长轮询 -> 回传结果。
-let pluginRunning = true;
-const fakePlugin = (async () => {
-  while (pluginRunning) {
-    let pr;
-    try {
-      pr = await fetch(`${base}/poll?sessionId=test-session`, { headers: authHeaders });
-    } catch {
-      continue;
-    }
-    if (pr.status === 204) continue;
-    if (pr.status !== 200) break;
-    const env = await pr.json();
-    await fetch(`${base}/response`, {
-      method: "POST", headers: authHeaders,
-      body: JSON.stringify({ id: env.id, ok: true, result: { echoed: env.tool, args: env.args } }),
-    });
-  }
-})();
-
-r = await fetch(`${base}/mcp`, {
-  method: "POST",
-  headers: { ...authHeaders, Accept: "application/json, text/event-stream", "mcp-session-id": sessionId ?? "" },
-  body: JSON.stringify({ jsonrpc: "2.0", id: 3, method: "tools/call", params: { name: "get_selection", arguments: {} } }),
-});
-const callText = await r.text();
-check("tool round-trip routes through the plugin and returns its result",
-  callText.includes("echoed") && callText.includes("get_selection"));
-
-pluginRunning = false;
-await Promise.race([fakePlugin, new Promise((res) => setTimeout(res, 500))]);
-
-// 9. Harness 工具在 core 本地处理（不经插件）：增一个 feature 再读 status。
 async function callTool(id, name, args) {
   const rr = await fetch(`${base}/mcp`, {
     method: "POST",
@@ -131,47 +92,58 @@ async function callTool(id, name, args) {
   });
   return rr.text();
 }
+
+// 7. tools/list（带 session）
+r = await fetch(`${base}/mcp`, {
+  method: "POST",
+  headers: { ...authHeaders, Accept: "application/json, text/event-stream", "mcp-session-id": sessionId ?? "" },
+  body: JSON.stringify({ jsonrpc: "2.0", id: 2, method: "tools/list", params: {} }),
+});
+const listText = await r.text();
+for (const t of [
+  "create_instance", "view_elements", "start_test", "run_luau", "get_console_output",
+  "build_parts", "set_lighting", "build_gui", "bot_spawn", "bot_see",
+  "edit_script_lines", "find_instances", "search_by_property", "get_tagged", "add_tag",
+  "search_scripts", "get_script_info", "harness_init", "harness_session_start",
+  "harness_feature_update", "fire_signal", "wait_for_event",
+]) {
+  check(`tools/list includes ${t}`, listText.includes(t));
+}
+
+// 8. 命令往返：MCP tools/call -> 队列 -> WS 推给假插件 -> 回传结果。
+const callText = await callTool(3, "get_selection", {});
+check("tool round-trip routes through the plugin (WS) and returns its result",
+  callText.includes("echoed") && callText.includes("get_selection"));
+
+// 9. Harness 工具在 core 本地处理（不经插件）。
 const featText = await callTool(10, "harness_feature_update", { title: "Smoke feature", priority: "high" });
 check("harness_feature_update creates a feature locally", featText.includes("Smoke feature") && featText.includes("F1"));
 const statusText = await callTool(11, "harness_status", {});
 check("harness_status reflects the new feature", statusText.includes("Smoke feature"));
 
-// 10. server-agent 通道：模拟 agent 连接（role=agent）并验证 fire_signal 路由到它。
-await fetch(`${base}/handshake`, {
-  method: "POST", headers: authHeaders,
-  body: JSON.stringify({ role: "server-agent", sessionId: "agent-session" }),
-});
-let agentRunning = true;
-const fakeAgent = (async () => {
-  while (agentRunning) {
-    let pr;
-    try {
-      pr = await fetch(`${base}/poll?role=agent&sessionId=agent-session`, { headers: authHeaders });
-    } catch { continue; }
-    if (pr.status === 204) continue;
-    if (pr.status !== 200) break;
-    const env = await pr.json();
-    await fetch(`${base}/response`, {
-      method: "POST", headers: authHeaders,
-      body: JSON.stringify({ id: env.id, ok: true, result: { agent: true, tool: env.tool, args: env.args } }),
-    });
-  }
-})();
+// 10. server-agent 通道（WS, role=agent）：验证 fire_signal 路由到它。
+const agent = fakeStudio("agent");
+await agent.opened;
+agent.handshake();
+await sleep(150);
 const fsText = await callTool(12, "fire_signal", { path: "ReplicatedStorage/Remote", method: "FireAllClients", args: [1] });
-check("fire_signal routes to the server-agent channel", fsText.includes("agent") && fsText.includes("FireAllClients"));
-agentRunning = false;
-await Promise.race([fakeAgent, new Promise((res) => setTimeout(res, 500))]);
+check("fire_signal routes to the server-agent WS channel", fsText.includes("agent") && fsText.includes("FireAllClients"));
 
-// 11. 事件推送：wait_for_event 阻塞等待，/event 推送后被唤醒。
+// 11. 事件：wait_for_event 阻塞等待，插件经 WS 推 event 后被唤醒。
 const waitPromise = callTool(13, "wait_for_event", { types: ["runState"], timeoutMs: 5000 });
-await new Promise((res) => setTimeout(res, 100));
-await fetch(`${base}/event`, {
-  method: "POST", headers: authHeaders,
-  body: JSON.stringify({ type: "runState", state: "Running" }),
-});
+await sleep(100);
+plugin.ws.send(JSON.stringify({ type: "event", event: { type: "runState", state: "Running" } }));
 const evText = await waitPromise;
-check("wait_for_event resolves when /event is pushed", evText.includes("runState") && evText.includes("Running"));
+check("wait_for_event resolves when an event is pushed over WS", evText.includes("runState") && evText.includes("Running"));
 
+// 12. WS 关闭 -> 标记离线
+plugin.ws.close();
+await sleep(150);
+r = await fetch(`${base}/health`, { headers: authHeaders });
+body = await r.json();
+check("plugin marked offline after WS close", body.pluginConnected === false);
+
+agent.ws.close();
 await svc.stop();
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail === 0 ? 0 : 1);

@@ -1,51 +1,28 @@
-// 基准测试：测量桥的命令热路径（dispatch -> 队列 -> 插件经 HTTP 长轮询 -> 回传 -> resolve）。
-// 用一个"假插件"在本地通过 HTTP 轮询/回传，模拟 Studio 端，但不依赖真实 Studio。
+// 基准测试：测量桥的命令热路径（dispatch -> 队列 -> 插件取走 -> 回传 -> resolve）。
+// 直接驱动 CommandQueue（进程内模拟插件），不经任何网络传输 —— 这样既稳定无噪声，
+// 又与传输实现（长轮询 / WebSocket）解耦，因此可同时跑在 base 和本 PR 的 core 上对比。
 //
 // 输出：顺序往返延迟的百分位 + 串行吞吐量。CI 中会写入 job summary 和 bench-results.json。
 
-import { CommandQueue, BridgeServer, ConfirmStore, generateToken } from "./packages/core/dist/index.js";
+import { CommandQueue } from "./packages/core/dist/index.js";
 import { writeFileSync, appendFileSync } from "node:fs";
 
-const PORT = Number(process.env.BENCH_PORT) || 7399;
 const SEQ_N = Number(process.env.BENCH_SEQ) || 300; // 顺序延迟样本数
 const THRPUT_N = Number(process.env.BENCH_THROUGHPUT) || 2000; // 吞吐量命令数
 const SESSION = "bench-session";
-const base = `http://127.0.0.1:${PORT}`;
 
-const token = generateToken();
 const queue = new CommandQueue();
-const bridge = new BridgeServer({ port: PORT, token, queue, confirm: new ConfirmStore() });
-await bridge.start();
+queue.setConnectedSession(SESSION);
 
-const authHeaders = {
-  Authorization: `Bearer ${token}`,
-  "X-Roblox-MCP": "1",
-  "Content-Type": "application/json",
-};
-
-// 假插件：持续长轮询，拿到命令立即回传一个固定结果。
+// 进程内"假插件"：不断从队列取命令并立即回传一个固定结果。
 let pluginRunning = true;
 const pluginLoop = (async () => {
   while (pluginRunning) {
-    let resp;
-    try {
-      resp = await fetch(`${base}/poll?sessionId=${SESSION}`, { headers: authHeaders });
-    } catch {
-      continue;
-    }
-    if (resp.status === 204) continue;
-    if (resp.status !== 200) break;
-    const env = await resp.json();
-    await fetch(`${base}/response`, {
-      method: "POST",
-      headers: authHeaders,
-      body: JSON.stringify({ id: env.id, ok: true, result: { ok: true, tool: env.tool } }),
-    }).catch(() => {});
+    const env = await queue.poll(SESSION);
+    if (!env) continue;
+    queue.resolveResponse({ id: env.id, ok: true, result: { ok: true, tool: env.tool } });
   }
 })();
-
-// 标记插件在线（让 dispatch 不被离线检查拦截）。
-queue.setConnectedSession(SESSION);
 
 function percentile(sorted, p) {
   if (sorted.length === 0) return 0;
@@ -94,8 +71,8 @@ console.log(`Measuring throughput (${THRPUT_N} commands)...`);
 const thr = await throughput(THRPUT_N);
 
 pluginRunning = false;
+queue.shutdown();
 await Promise.race([pluginLoop, new Promise((r) => setTimeout(r, 500))]);
-await bridge.stop();
 
 const results = { timestamp: new Date().toISOString(), node: process.version, sequential: seq, throughput: thr };
 
@@ -110,7 +87,7 @@ writeFileSync(outPath, JSON.stringify(results, null, 2));
 
 const md = `### Bridge benchmark
 
-Command hot path: \`dispatch → queue → plugin poll (HTTP) → response (HTTP) → resolve\`, with a simulated plugin (no Roblox Studio).
+Command hot path: \`dispatch → queue → plugin takes command → response → resolve\`, with an in-process simulated plugin (no Roblox Studio, no network transport).
 
 **Sequential round-trip latency** (${seq.samples} samples)
 
@@ -120,7 +97,7 @@ Command hot path: \`dispatch → queue → plugin poll (HTTP) → response (HTTP
 
 **Serial throughput**: ${thr.opsPerSec} ops/sec (${thr.commands} commands in ${thr.wallMs} ms)
 
-_Node ${results.node}. Measures the local bridge only; a real Studio plugin adds DataModel + network time._
+_Node ${results.node}. Measures the local command queue only; a real Studio plugin adds DataModel + WebSocket time._
 `;
 
 // 写到文件供 PR 评论使用，并（在 CI 中）追加到 job summary。

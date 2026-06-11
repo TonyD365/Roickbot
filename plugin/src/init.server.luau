@@ -1,9 +1,9 @@
--- Claude Bridge 插件入口：工具栏、状态面板、配对、长轮询循环。
+-- Claude Bridge 插件入口：工具栏、状态面板、配对、WebSocket 连接。
+-- 传输用 HttpService:CreateWebStreamClient(WebSocket)（Studio 持久双向连接），取代旧的长轮询。
 
 local HttpService = game:GetService("HttpService")
 
 local Config = require(script.Config)
-local Net = require(script.Net)
 local Dispatcher = require(script.Dispatcher)
 
 local SETTING_TOKEN = "claude_bridge_token"
@@ -18,8 +18,8 @@ end
 local function getPort(): number
 	return tonumber(plugin:GetSetting(SETTING_PORT)) or Config.DefaultPort
 end
-local function baseUrl(): string
-	return Config.DefaultHost .. ":" .. tostring(getPort())
+local function wsUrl(): string
+	return "ws://127.0.0.1:" .. tostring(getPort()) .. "/ws"
 end
 
 ------------------------------------------------------------------- UI
@@ -103,74 +103,146 @@ local function refreshButton()
 	connectBtn.Text = if running then "Disconnect" else "Connect"
 end
 
-------------------------------------------------------------------- 轮询
-local function pollLoop()
-	local backoff = Config.PollBackoffStart
-	while running do
-		local ok, resp = pcall(Net.poll, baseUrl(), getToken(), sessionId)
-		if not ok then
-			setStatus("Reconnecting… Is the desktop app running and HttpService enabled?")
-			task.wait(backoff)
-			backoff = math.min(backoff * 2, Config.PollBackoffMax)
-			continue
-		end
-		backoff = Config.PollBackoffStart
-		local code = resp.StatusCode
-		if code == 204 then
-			setStatus("Connected. Waiting for commands…")
-		elseif code == 200 then
-			local okDecode, env = pcall(function()
-				return HttpService:JSONDecode(resp.Body)
-			end)
-			if okDecode then
-				setStatus("Running: " .. tostring(env.tool))
-				local response = Dispatcher.dispatch(env)
-				pcall(Net.respond, baseUrl(), getToken(), response)
-				setStatus("Connected. Last: " .. tostring(env.tool))
-			end
-		elseif code == 401 or code == 403 then
-			setStatus("Auth failed (" .. tostring(code) .. "). Check the token.")
-			running = false
-			refreshButton()
-		else
-			setStatus("Unexpected status: " .. tostring(code))
-		end
+------------------------------------------------------------------- WebSocket 连接
+local client: any = nil -- 当前 WebStreamClient
+local generation = 0 -- 每次连接自增，用来识别"过期"连接的回调/重连
+
+-- 通过 WS 发一条 JSON 消息（连接未就绪时静默忽略）。
+local function send(tbl: any): boolean
+	if not client then
+		return false
 	end
+	local ok = pcall(function()
+		client:Send(HttpService:JSONEncode(tbl))
+	end)
+	return ok
+end
+
+local function handleMessage(message: string)
+	local ok, m = pcall(function()
+		return HttpService:JSONDecode(message)
+	end)
+	if not ok or type(m) ~= "table" then
+		return
+	end
+	if m.type == "command" then
+		local env = m.payload
+		setStatus("Running: " .. tostring(env.tool))
+		local response = Dispatcher.dispatch(env)
+		response.type = "response"
+		send(response)
+		setStatus("Connected (WebSocket). Last: " .. tostring(env.tool))
+	elseif m.type == "handshake_ok" then
+		setStatus("Connected (WebSocket). Waiting for commands…")
+	end
+end
+
+local startConnection -- 前向声明（Closed 回调里重连用）
+
+startConnection = function()
+	if not running then
+		return
+	end
+	local token = getToken()
+	if token == "" then
+		running = false
+		refreshButton()
+		setStatus("Paste the token from the desktop app first.")
+		return
+	end
+	if not (HttpService :: any).CreateWebStreamClient then
+		running = false
+		refreshButton()
+		setStatus("This Studio build has no WebSocket support. Enable it in File ▸ Beta Features, then reconnect.")
+		return
+	end
+
+	generation += 1
+	local gen = generation
+	setStatus("Connecting (WebSocket)…")
+
+	local ok, c = pcall(function()
+		return HttpService:CreateWebStreamClient(Enum.WebStreamClientType.WebSocket, {
+			Url = wsUrl(),
+			Headers = { Authorization = "Bearer " .. token, ["X-Roblox-MCP"] = "1" },
+		})
+	end)
+	if not ok or not c then
+		-- 多半是实验性功能未开启；Roblox 没有从代码开启 Beta Feature 的 API，只能引导用户手开。
+		setStatus("WebSocket unavailable (" .. tostring(c) .. "). Enable it in File ▸ Beta Features and reconnect.")
+		if running then
+			task.wait(3)
+			if running and gen == generation then
+				startConnection()
+			end
+		end
+		return
+	end
+
+	client = c
+
+	c.Opened:Connect(function()
+		if gen ~= generation then
+			return
+		end
+		send({
+			type = "handshake",
+			pluginVersion = Config.PluginVersion,
+			sessionId = sessionId,
+			placeId = game.PlaceId,
+			tools = Dispatcher.toolNames(),
+		})
+		setStatus("Connected (WebSocket). Waiting for commands…")
+	end)
+
+	c.MessageReceived:Connect(function(message: string)
+		if gen == generation then
+			handleMessage(message)
+		end
+	end)
+
+	c.Error:Connect(function(code: number, errorMessage: string)
+		if gen == generation then
+			setStatus("WebSocket error " .. tostring(code) .. ": " .. tostring(errorMessage))
+		end
+	end)
+
+	c.Closed:Connect(function()
+		if gen ~= generation then
+			return
+		end
+		client = nil
+		if running then
+			setStatus("Disconnected — reconnecting…")
+			task.wait(1)
+			if running and gen == generation then
+				startConnection()
+			end
+		else
+			setStatus("Disconnected.")
+		end
+	end)
 end
 
 local function connect()
 	if running then
 		return
 	end
-	local token = getToken()
-	if token == "" then
-		setStatus("Paste the token from the desktop app first.")
-		return
-	end
 	running = true
 	refreshButton()
-	setStatus("Connecting…")
-	task.spawn(function()
-		local info = {
-			pluginVersion = Config.PluginVersion,
-			sessionId = sessionId,
-			placeId = game.PlaceId,
-			tools = Dispatcher.toolNames(),
-		}
-		local ok, resp = pcall(Net.handshake, baseUrl(), token, info)
-		if not ok or (resp and resp.StatusCode ~= 200) then
-			running = false
-			refreshButton()
-			setStatus("Handshake failed. Check the desktop app, token, and HttpService.")
-			return
-		end
-		pollLoop()
-	end)
+	startConnection()
 end
 
 local function disconnect()
 	running = false
+	generation += 1 -- 让所有旧回调/重连失效
 	refreshButton()
+	if client then
+		pcall(function()
+			client:Close()
+		end)
+		client = nil
+	end
 	setStatus("Disconnected.")
 end
 
@@ -215,10 +287,9 @@ do
 				local s = stateStr()
 				if s ~= last then
 					last = s
-					pcall(Net.event, baseUrl(), getToken(), {
-						type = "runState",
-						state = s,
-						isRunning = RunService:IsRunning(),
+					send({
+						type = "event",
+						event = { type = "runState", state = s, isRunning = RunService:IsRunning() },
 					})
 				end
 			end
@@ -226,10 +297,17 @@ do
 	end)
 
 	-- 把运行时报错也推成事件，wait_for_event 可一次等到"出错了"。
+	-- 节流：最多每秒 1 条，避免错误风暴。
 	local LogService = game:GetService("LogService")
+	local lastErrAt = -1
 	LogService.MessageOut:Connect(function(message: string, messageType: Enum.MessageType)
 		if running and messageType == Enum.MessageType.MessageError then
-			pcall(Net.event, baseUrl(), getToken(), { type = "output", messageType = "Error", message = message })
+			local now = os.clock()
+			if now - lastErrAt < 1 then
+				return
+			end
+			lastErrAt = now
+			send({ type = "event", event = { type = "output", messageType = "Error", message = message } })
 		end
 	end)
 end

@@ -46,7 +46,7 @@ const verdict = regressed
 
 const md = `### Bridge benchmark — this PR vs base (\`main\`)
 
-Same-runner, back-to-back run of the command hot path (\`dispatch → queue → plugin poll → response → resolve\`) with a simulated plugin.
+Same-runner, back-to-back run of the command hot path (\`dispatch → queue → plugin takes command → response → resolve\`) with an in-process simulated plugin.
 
 **Sequential round-trip latency** (smaller is better)
 

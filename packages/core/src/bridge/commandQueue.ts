@@ -40,8 +40,8 @@ export class CommandFailure extends Error {
 
 const DEFAULT_DEADLINE_MS = 15_000;
 const DEFAULT_POLL_TIMEOUT_MS = 25_000;
-/** 超过该时长没有 poll，则认为插件离线。 */
-const PLUGIN_OFFLINE_MS = 40_000;
+/** 超过该时长没有 poll，则认为插件离线。需大于最长命令耗时（run_luau 默认 30s），否则执行长命令时会误判离线。 */
+const PLUGIN_OFFLINE_MS = 75_000;
 const LOG_MAX = 50;
 
 /** 命令日志条目（供桌面 App 的活动面板展示）。 */
@@ -92,6 +92,19 @@ export class CommandQueue {
     this.lastPollAt = Date.now();
   }
 
+  /** WS 连接关闭时调用：明确标记断开（不必等心跳超时）。 */
+  markDisconnected(): void {
+    this.connectedSessionId = null;
+    this.lastPollAt = 0;
+    this.pluginTools = null;
+    // 唤醒停泊的 waiter，让 WS 推送循环及时退出。
+    if (this.waiter) {
+      clearTimeout(this.waiter.timer);
+      this.waiter.resolve(null);
+      this.waiter = null;
+    }
+  }
+
   /** 记录插件上报的工具集；不传则视为未知（旧插件，跳过预检）。 */
   setPluginTools(tools: string[] | undefined): void {
     this.pluginTools = tools && tools.length ? new Set(tools) : null;
@@ -105,9 +118,11 @@ export class CommandQueue {
     return this.pluginTools === null || this.pluginTools.has(tool);
   }
 
-  /** 插件是否在线（最近有 poll 心跳）。 */
+  /** 插件是否在线：最近有 poll 心跳，或当前有命令在执行中（执行长命令时不轮询，属正常）。 */
   isPluginConnected(): boolean {
-    return this.connectedSessionId !== null && Date.now() - this.lastPollAt < PLUGIN_OFFLINE_MS;
+    if (this.connectedSessionId === null) return false;
+    if (this.inflight.size > 0) return true; // 正在执行命令 = 插件活着，只是忙。
+    return Date.now() - this.lastPollAt < PLUGIN_OFFLINE_MS;
   }
 
   get queueDepth(): number {

@@ -14,21 +14,7 @@ local self = script
 local token = tostring(self:GetAttribute("ClaudeToken"))
 local port = self:GetAttribute("ClaudePort")
 local session = self:GetAttribute("ClaudeSession") or HttpService:GenerateGUID(false)
-local base = "http://127.0.0.1:" .. tostring(port)
-local headers = {
-	["Content-Type"] = "application/json",
-	["Authorization"] = "Bearer " .. token,
-	["X-Roblox-MCP"] = "1",
-}
-
-local function req(path, method, body)
-	return HttpService:RequestAsync({
-		Url = base .. path,
-		Method = method,
-		Headers = headers,
-		Body = if body ~= nil then HttpService:JSONEncode(body) else nil,
-	})
-end
+local url = "ws://127.0.0.1:" .. tostring(port) .. "/ws?role=agent"
 
 local function resolve(path)
 	if not path or path == "" then
@@ -162,27 +148,48 @@ local function dispatch(env)
 	return { id = env.id, ok = false, error = { code = "AGENT_ERROR", message = tostring(res) } }
 end
 
-pcall(req, "/handshake", "POST", { role = "server-agent", sessionId = session, pluginVersion = "agent" })
+-- 通过 WebSocket 连回桥（agent 通道）。Studio 无 WS 支持则 agent 直接退出（server 上下文工具会返回未连接错误）。
+if not (HttpService :: any).CreateWebStreamClient then
+	return
+end
 
-while true do
-	local ok, resp = pcall(req, "/poll?role=agent&sessionId=" .. session, "GET")
-	if not ok then
-		task.wait(0.5)
-	else
-		local code = resp.StatusCode
-		if code == 200 then
-			local okD, env = pcall(function()
-				return HttpService:JSONDecode(resp.Body)
-			end)
-			if okD then
-				local response = dispatch(env)
-				pcall(req, "/response", "POST", response)
-			end
-		elseif code ~= 204 then
-			task.wait(0.5)
-		end
+local client
+local function send(tbl)
+	if client then
+		pcall(function()
+			client:Send(HttpService:JSONEncode(tbl))
+		end)
 	end
 end
+
+local ok, c = pcall(function()
+	return HttpService:CreateWebStreamClient(Enum.WebStreamClientType.WebSocket, {
+		Url = url,
+		Headers = { ["Authorization"] = "Bearer " .. token, ["X-Roblox-MCP"] = "1" },
+	})
+end)
+if not ok or not c then
+	return
+end
+client = c
+
+c.Opened:Connect(function()
+	send({ type = "handshake", role = "server-agent", sessionId = session, pluginVersion = "agent" })
+end)
+
+c.MessageReceived:Connect(function(message)
+	local okD, m = pcall(function()
+		return HttpService:JSONDecode(message)
+	end)
+	if not okD or type(m) ~= "table" then
+		return
+	end
+	if m.type == "command" then
+		local response = dispatch(m.payload)
+		response.type = "response"
+		send(response)
+	end
+end)
 ]==]
 
 return M
