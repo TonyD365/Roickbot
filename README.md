@@ -66,18 +66,20 @@ Claude Code (VSCode)
    ▼
 Desktop app (Electron)
    ├─ MCP server  (@modelcontextprotocol/sdk, Streamable HTTP)
-   ├─ Studio bridge (127.0.0.1 HTTP, long-polling)
+   ├─ Studio bridge (127.0.0.1, WebSocket)
    └─ token / pairing / auth
-   ▲  GET /poll  +  POST /response
+   ▲  WebSocket /ws  (persistent, bidirectional)
    ▼
 Roblox Studio plugin (Luau)  — runs commands on the DataModel
 ```
 
-Roblox Studio plugins **cannot accept inbound connections**, so the plugin **long-polls** the local
-bridge for the next command and posts the result back. The desktop app owns the service lifecycle,
-hosts both the MCP endpoint (for Claude Code) and the bridge (for the plugin), and helps you connect
-everything. Because Luau also cannot read real screen pixels, "vision" (Phase 3) is delivered as
-structured data (raycast hits + nearby objects), not images.
+The Studio plugin connects to the bridge over a **WebSocket** (Studio's
+`HttpService:CreateWebStreamClient`), a persistent two-way channel: the server pushes commands
+instantly and the plugin streams back results and events — so there's no polling gap, and a dropped
+connection is detected immediately. The desktop app owns the service lifecycle, hosts both the MCP
+endpoint (for Claude Code) and the bridge (for the plugin), and helps you connect everything. Because
+Luau also cannot read real screen pixels, "vision" (Phase 3) is delivered as structured data (raycast
+hits + nearby objects), not images.
 
 See [docs/PROTOCOL.md](docs/PROTOCOL.md) for the full wire protocol.
 
@@ -289,16 +291,17 @@ Claude Code (VSCode)
    ▼
 桌面应用 (Electron)
    ├─ MCP 服务器  (@modelcontextprotocol/sdk, Streamable HTTP)
-   ├─ Studio 桥 (127.0.0.1 HTTP, 长轮询)
+   ├─ Studio 桥 (127.0.0.1, WebSocket)
    └─ token / 配对 / 鉴权
-   ▲  GET /poll  +  POST /response
+   ▲  WebSocket /ws  (常驻双向连接)
    ▼
 Roblox Studio 插件 (Luau)  —— 在 DataModel 上执行命令
 ```
 
-Roblox Studio 插件**无法接收入站连接**，因此插件**长轮询**本地桥来获取下一条命令并回传结果。桌面应用持有
-服务的生命周期，同时托管 MCP 端点（给 Claude Code）和桥（给插件），并帮你把各端连起来。由于 Luau 也读不到
-真实屏幕像素，所以"视觉"（第三阶段）以结构化数据（射线命中 + 邻近物体）而非图片的形式提供。
+Studio 插件通过 **WebSocket**（Studio 的 `HttpService:CreateWebStreamClient`）连接到桥 —— 这是一条常驻双向
+通道：服务器即时推送命令、插件回传结果与事件，因此没有轮询间隙，连接断开也能立刻感知。桌面应用持有服务的
+生命周期，同时托管 MCP 端点（给 Claude Code）和桥（给插件），并帮你把各端连起来。由于 Luau 也读不到真实屏幕
+像素，所以"视觉"（第三阶段）以结构化数据（射线命中 + 邻近物体）而非图片的形式提供。
 
 完整通信协议见 [docs/PROTOCOL.md](docs/PROTOCOL.md)。
 
