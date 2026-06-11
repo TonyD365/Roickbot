@@ -92,6 +92,19 @@ export class CommandQueue {
     this.lastPollAt = Date.now();
   }
 
+  /** WS 连接关闭时调用：明确标记断开（不必等心跳超时）。 */
+  markDisconnected(): void {
+    this.connectedSessionId = null;
+    this.lastPollAt = 0;
+    this.pluginTools = null;
+    // 唤醒停泊的 waiter，让 WS 推送循环及时退出。
+    if (this.waiter) {
+      clearTimeout(this.waiter.timer);
+      this.waiter.resolve(null);
+      this.waiter = null;
+    }
+  }
+
   /** 记录插件上报的工具集；不传则视为未知（旧插件，跳过预检）。 */
   setPluginTools(tools: string[] | undefined): void {
     this.pluginTools = tools && tools.length ? new Set(tools) : null;

@@ -1,18 +1,21 @@
-// 本地 HTTP 桥服务器：
-//   - /mcp        给 Claude Code 的 MCP (Streamable HTTP) 端点
-//   - /poll       Studio 插件长轮询拉取命令
-//   - /response   Studio 插件回传结果
-//   - /handshake  Studio 插件首次连接（配对）
-//   - /health     诊断
-// 只绑定 127.0.0.1；所有端点先过鉴权中间件。
+// 本地桥服务器：
+//   - /mcp     给 Claude Code 的 MCP (Streamable HTTP) 端点（HTTP）
+//   - /ws      Studio 插件 / 运行时 agent 的 WebSocket 通道（持久双向连接）
+//   - /health  诊断（HTTP）
+// 只绑定 127.0.0.1；HTTP 与 WS 升级都先过鉴权中间件。
+//
+// 传输已从长轮询切换为 WebSocket（Studio 的 HttpService:CreateWebStreamClient）。
+// WS 处理器复用现有 CommandQueue：每连接跑一个 poll→send 推送循环，收到 response/event 即回灌。
 
 import { createServer, IncomingMessage, Server, ServerResponse } from "node:http";
 import { randomUUID } from "node:crypto";
+import { WebSocketServer, WebSocket } from "ws";
+import type { Duplex } from "node:stream";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { isInitializeRequest } from "@modelcontextprotocol/sdk/types.js";
 import { buildMcpServer, SERVER_VERSION } from "../mcp/server.js";
 import { authorizeRequest } from "../security/auth.js";
-import { PROTOCOL_VERSION, ResponseEnvelope, HandshakeInfo } from "./envelope.js";
+import { PROTOCOL_VERSION, HandshakeInfo, ResponseEnvelope } from "./envelope.js";
 import type { CommandQueue } from "./commandQueue.js";
 import type { ConfirmStore } from "../safety/confirm.js";
 import type { Harness } from "../harness/harness.js";
@@ -35,6 +38,7 @@ const HOST = "127.0.0.1";
 
 export class BridgeServer {
   private server: Server | null = null;
+  private wss: WebSocketServer | null = null;
   private mcpTransports = new Map<string, StreamableHTTPServerTransport>();
   private lastMcpAt = 0;
   private mcpClient: { name: string; version?: string } | null = null;
@@ -61,6 +65,8 @@ export class BridgeServer {
           res.end(JSON.stringify({ error: String(e) }));
         });
       });
+      this.wss = new WebSocketServer({ noServer: true });
+      server.on("upgrade", (req, socket, head) => this.handleUpgrade(req, socket as Duplex, head));
       server.on("error", reject);
       server.listen(this.opts.port, HOST, () => resolve());
       this.server = server;
@@ -76,11 +82,101 @@ export class BridgeServer {
       }
     }
     this.mcpTransports.clear();
+    if (this.wss) {
+      for (const client of this.wss.clients) {
+        try {
+          client.terminate();
+        } catch {
+          // ignore
+        }
+      }
+      this.wss.close();
+      this.wss = null;
+    }
     await new Promise<void>((resolve) => {
       if (!this.server) return resolve();
       this.server.close(() => resolve());
     });
     this.server = null;
+  }
+
+  // ---- WebSocket 升级（插件 / agent 通道） ----
+  private handleUpgrade(req: IncomingMessage, socket: Duplex, head: Buffer): void {
+    const url = new URL(req.url ?? "/", `http://${HOST}:${this.opts.port}`);
+    if (url.pathname !== "/ws") {
+      socket.destroy();
+      return;
+    }
+    const auth = authorizeRequest(req, { token: this.opts.token, port: this.opts.port });
+    if (!auth.ok) {
+      socket.write(`HTTP/1.1 ${auth.status ?? 401} Unauthorized\r\n\r\n`);
+      socket.destroy();
+      return;
+    }
+    this.wss!.handleUpgrade(req, socket, head, (ws) => this.handleWs(ws, url));
+  }
+
+  private handleWs(ws: WebSocket, url: URL): void {
+    const isAgent = url.searchParams.get("role") === "agent";
+    const queue = isAgent ? this.opts.agentQueue : this.opts.queue;
+    let pumping = false;
+    let sid: string = randomUUID();
+
+    // 推送循环：把队列里的命令通过 WS 即时发给插件。
+    const pump = async () => {
+      if (pumping) return;
+      pumping = true;
+      try {
+        while (ws.readyState === WebSocket.OPEN) {
+          const env = await queue.poll(sid);
+          if (env && ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify({ type: "command", payload: env }));
+          }
+        }
+      } catch {
+        // 连接关闭等，退出循环即可。
+      }
+    };
+
+    ws.on("message", (data) => {
+      let msg: { type?: string; [k: string]: unknown };
+      try {
+        msg = JSON.parse(data.toString());
+      } catch {
+        return;
+      }
+      if (!msg || typeof msg.type !== "string") return;
+
+      if (msg.type === "handshake") {
+        if (typeof msg.sessionId === "string" && msg.sessionId) sid = msg.sessionId;
+        queue.setConnectedSession(sid);
+        if (isAgent) {
+          this.opts.events.publish({ type: "agentState", state: "online" });
+        } else {
+          queue.setPluginTools(msg.tools as string[] | undefined);
+          this.opts.onHandshake?.(msg as unknown as HandshakeInfo);
+        }
+        ws.send(
+          JSON.stringify({ type: "handshake_ok", protocol: PROTOCOL_VERSION, serverVersion: SERVER_VERSION }),
+        );
+        void pump();
+      } else if (msg.type === "response") {
+        // id 可能属于任一通道，两边都试一下。
+        const r = msg as unknown as ResponseEnvelope;
+        void (this.opts.queue.resolveResponse(r) || this.opts.agentQueue.resolveResponse(r));
+      } else if (msg.type === "event") {
+        const ev = msg.event as { type?: string } | undefined;
+        if (ev && typeof ev.type === "string") this.opts.events.publish(ev as { type: string });
+      }
+    });
+
+    ws.on("close", () => {
+      queue.markDisconnected();
+      if (isAgent) this.opts.events.publish({ type: "agentState", state: "offline" });
+    });
+    ws.on("error", () => {
+      // close 事件会随后触发，这里不额外处理。
+    });
   }
 
   private async handle(req: IncomingMessage, res: ServerResponse): Promise<void> {
@@ -96,10 +192,6 @@ export class BridgeServer {
     }
 
     if (path === "/mcp") return this.handleMcp(req, res);
-    if (path === "/poll" && req.method === "GET") return this.handlePoll(url, res);
-    if (path === "/response" && req.method === "POST") return this.handleResponse(req, res);
-    if (path === "/handshake" && req.method === "POST") return this.handleHandshake(req, res);
-    if (path === "/event" && req.method === "POST") return this.handleEvent(req, res);
     if (path === "/health" && req.method === "GET") return this.handleHealth(res);
 
     res.writeHead(404, { "content-type": "application/json" });
@@ -153,60 +245,6 @@ export class BridgeServer {
     }
 
     await transport.handleRequest(req, res, body);
-  }
-
-  // ---- 长轮询（plugin 默认通道 / agent 运行时通道，由 role 区分） ----
-  private async handlePoll(url: URL, res: ServerResponse): Promise<void> {
-    const sessionId = url.searchParams.get("sessionId") ?? "";
-    const queue = url.searchParams.get("role") === "agent" ? this.opts.agentQueue : this.opts.queue;
-    const env = await queue.poll(sessionId);
-    if (!env) {
-      res.writeHead(204);
-      res.end();
-      return;
-    }
-    res.writeHead(200, { "content-type": "application/json" });
-    res.end(JSON.stringify(env));
-  }
-
-  // ---- 回传结果（id 可能属于任一通道，两边都试一下） ----
-  private async handleResponse(req: IncomingMessage, res: ServerResponse): Promise<void> {
-    const body = (await readJsonBody(req)) as ResponseEnvelope;
-    const matched = this.opts.queue.resolveResponse(body) || this.opts.agentQueue.resolveResponse(body);
-    res.writeHead(200, { "content-type": "application/json" });
-    res.end(JSON.stringify({ ok: matched }));
-  }
-
-  // ---- 配对（plugin 或 server-agent） ----
-  private async handleHandshake(req: IncomingMessage, res: ServerResponse): Promise<void> {
-    const info = (await readJsonBody(req)) as HandshakeInfo & { role?: string };
-    if (info.role === "server-agent") {
-      // 运行时 agent 上线（无需 UI 通知，不影响插件配对状态）。
-      this.opts.agentQueue.setConnectedSession(info.sessionId);
-      this.opts.events.publish({ type: "agentState", state: "online" });
-    } else {
-      this.opts.queue.setConnectedSession(info.sessionId);
-      this.opts.queue.setPluginTools(info.tools);
-      this.opts.onHandshake?.(info);
-    }
-    res.writeHead(200, { "content-type": "application/json" });
-    res.end(
-      JSON.stringify({
-        ok: true,
-        protocol: PROTOCOL_VERSION,
-        serverVersion: SERVER_VERSION,
-      }),
-    );
-  }
-
-  // ---- 事件上报（插件/agent 主动 push，如运行状态变化） ----
-  private async handleEvent(req: IncomingMessage, res: ServerResponse): Promise<void> {
-    const body = (await readJsonBody(req)) as { type?: string; [k: string]: unknown };
-    if (body && typeof body.type === "string") {
-      this.opts.events.publish(body as { type: string });
-    }
-    res.writeHead(200, { "content-type": "application/json" });
-    res.end(JSON.stringify({ ok: true }));
   }
 
   // ---- 健康检查 ----

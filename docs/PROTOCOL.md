@@ -1,19 +1,31 @@
 # Bridge protocol
 
-The desktop app hosts one HTTP server on `127.0.0.1:<port>` (default `7331`). Every endpoint is
-behind the auth middleware described in [SECURITY.md](SECURITY.md).
+The desktop app hosts one server on `127.0.0.1:<port>` (default `7331`): an HTTP endpoint for the
+MCP client, and a **WebSocket** endpoint for the Studio plugin / runtime agent. Both are behind the
+auth middleware described in [SECURITY.md](SECURITY.md).
+
+The Studio side connects over WebSocket via `HttpService:CreateWebStreamClient(Enum.WebStreamClientType.WebSocket, …)`
+(a persistent, bidirectional channel — replaces the old HTTP long-poll). The auth token and
+`X-Roblox-MCP` header are sent in the WebSocket upgrade request headers, so the same auth/origin/host
+checks apply.
 
 ## Endpoints
 
-| Method | Path | Caller | Purpose |
+| Kind | Path | Caller | Purpose |
 | --- | --- | --- | --- |
-| any | `/mcp` | Claude Code | MCP Streamable HTTP endpoint (stateful sessions). |
-| GET | `/poll?sessionId=<id>` | Studio plugin | Long-poll for the next command. `200` + envelope, or `204` after ~25s. |
-| POST | `/response` | Studio plugin | Return a command result. |
-| POST | `/handshake` | Studio plugin | Pair / announce. Returns protocol + server version. |
-| GET | `/health` | diagnostics | `{ ok, serverVersion, pluginConnected, queueDepth }`. |
+| HTTP | `/mcp` | MCP client (Claude Code, …) | MCP Streamable HTTP endpoint (stateful sessions). |
+| WS | `/ws` | Studio plugin | Persistent command/response/event channel. |
+| WS | `/ws?role=agent` | Runtime server agent | Same channel for server-context tools (during a test). |
+| HTTP GET | `/health` | diagnostics | `{ ok, serverVersion, pluginConnected, agentConnected, queueDepth }`. |
 
-## Command envelope (server → plugin)
+## WebSocket messages
+
+Plugin → server: `{ "type": "handshake", "pluginVersion", "sessionId", "tools": [...], "role"? }`,
+`{ "type": "response", "id", "ok", "result"|"error" }`, `{ "type": "event", "event": { "type": "runState"|"output"|... } }`.
+
+Server → plugin: `{ "type": "command", "payload": <envelope> }`, `{ "type": "handshake_ok", "protocol", "serverVersion" }`.
+
+### Command envelope (inside `payload`)
 
 ```json
 {
@@ -26,24 +38,28 @@ behind the auth middleware described in [SECURITY.md](SECURITY.md).
 }
 ```
 
-## Response envelope (plugin → server)
+### Response
 
 ```json
-{ "id": "uuid", "ok": true, "result": { "path": "Workspace/Part", "className": "Part" } }
+{ "type": "response", "id": "uuid", "ok": true, "result": { "path": "Workspace/Part" } }
 ```
 or
 ```json
-{ "id": "uuid", "ok": false, "error": { "code": "PATH_DENIED", "message": "..." } }
+{ "type": "response", "id": "uuid", "ok": false, "error": { "code": "PATH_DENIED", "message": "..." } }
 ```
 
 ## Concurrency & timeouts
 
-- Commands run **serially** in the plugin (the DataModel is single-threaded and HttpService
-  allows only ~3 in-flight requests). The server keeps a FIFO queue and an in-flight map.
-- One outstanding `/poll` per session; on `204` the plugin re-polls immediately (this doubles as
-  a heartbeat — no poll for >40s marks the plugin offline).
+- Commands run **serially** in the plugin (the DataModel is single-threaded). The server keeps a FIFO
+  queue and an in-flight map; one push loop per WebSocket connection delivers commands.
+- The WebSocket connection's liveness is authoritative (no polling gap). A closed socket immediately
+  marks the plugin offline; an in-flight command also counts as "connected" (the plugin is just busy).
 - Each command has a server-side deadline (default 15s, longer for `run_luau`); late responses are
   dropped.
+
+> If the Studio build lacks WebSocket support (`CreateWebStreamClient` missing), the plugin reports
+> it and asks the user to enable it in **File ▸ Beta Features** — there is no API to enable a Studio
+> beta feature from code.
 
 ## Error codes
 
