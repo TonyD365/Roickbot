@@ -42,7 +42,7 @@ The **Gemini CLI** is free, has a generous free tier, and is good at tool use.
 ```json
 {
   "mcpServers": {
-    "roblox-studio": {
+    "brickbot": {
       "httpUrl": "http://127.0.0.1:7331/mcp",
       "headers": {
         "Authorization": "Bearer PASTE_TOKEN_FROM_THE_APP",
@@ -63,7 +63,7 @@ Add to `~/.cursor/mcp.json` (global) or `.cursor/mcp.json` (project):
 ```json
 {
   "mcpServers": {
-    "roblox-studio": {
+    "brickbot": {
       "url": "http://127.0.0.1:7331/mcp",
       "headers": { "Authorization": "Bearer PASTE_TOKEN", "X-Roblox-MCP": "1" }
     }
@@ -78,7 +78,7 @@ Add to `.vscode/mcp.json`:
 ```json
 {
   "servers": {
-    "roblox-studio": {
+    "brickbot": {
       "type": "http",
       "url": "http://127.0.0.1:7331/mcp",
       "headers": { "Authorization": "Bearer PASTE_TOKEN", "X-Roblox-MCP": "1" }
@@ -95,7 +95,7 @@ Use the app's **Install MCP config** button, or add it manually (see
 ```json
 {
   "mcpServers": {
-    "roblox-studio": {
+    "brickbot": {
       "type": "http",
       "url": "http://127.0.0.1:7331/mcp",
       "headers": { "Authorization": "Bearer PASTE_TOKEN", "X-Roblox-MCP": "1" }
@@ -115,7 +115,7 @@ won't connect. Add this to its `cline_mcp_settings.json`:
 ```json
 {
   "mcpServers": {
-    "roblox-studio": {
+    "brickbot": {
       "type": "streamableHttp",
       "url": "http://127.0.0.1:7331/mcp",
       "headers": { "Authorization": "Bearer PASTE_TOKEN", "X-Roblox-MCP": "1" },

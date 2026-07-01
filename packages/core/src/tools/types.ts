@@ -60,7 +60,7 @@ export async function forward(
     const text = useAgent
       ? "The server runtime agent is not connected. Call start_test first — it injects an agent into the " +
         "running game so server-context tools can run. (The agent only exists while a test is running.)"
-      : "The Roblox Studio plugin is not connected. Open Studio, install/enable the Claude Bridge plugin, " +
+      : "The Roblox Studio plugin is not connected. Open Studio, install/enable the Brickbot plugin, " +
         "and connect it using the token shown in the desktop app.";
     return { content: [{ type: "text", text }], isError: true };
   }

@@ -1,5 +1,5 @@
 {
-  "name": "claude-for-roblox-studio",
+  "name": "brickbot",
   "version": "0.1.0",
   "private": true,
   "description": "Desktop app + MCP server that lets Claude / Claude Code control Roblox Studio.",
@@ -14,7 +14,7 @@
     "build:desktop": "npm run build --workspace packages/desktop",
     "typecheck": "npm run typecheck --workspace packages/core && npm run typecheck --workspace packages/desktop",
     "test": "npm run test --workspace packages/core",
-    "build:plugin": "rojo build plugin/default.project.json -o dist/ClaudeBridge.rbxmx",
+    "build:plugin": "rojo build plugin/default.project.json -o dist/Brickbot.rbxmx",
     "dev:core": "npm run dev --workspace packages/core"
   },
   "engines": {

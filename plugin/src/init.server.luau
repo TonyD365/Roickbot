@@ -1,4 +1,4 @@
--- Claude Bridge 插件入口：工具栏、状态面板、配对、WebSocket 连接。
+-- Brickbot 插件入口：工具栏、状态面板、配对、WebSocket 连接。
 -- 传输用 HttpService:CreateWebStreamClient(WebSocket)（Studio 持久双向连接），取代旧的长轮询。
 
 local HttpService = game:GetService("HttpService")
@@ -6,8 +6,8 @@ local HttpService = game:GetService("HttpService")
 local Config = require(script.Config)
 local Dispatcher = require(script.Dispatcher)
 
-local SETTING_TOKEN = "claude_bridge_token"
-local SETTING_PORT = "claude_bridge_port"
+local SETTING_TOKEN = "brickbot_token"
+local SETTING_PORT = "brickbot_port"
 
 local running = false
 local sessionId = HttpService:GenerateGUID(false)
@@ -60,17 +60,17 @@ local function stroke(inst: Instance, color: Color3, thickness: number, transpar
 	s.Parent = inst
 end
 
-local toolbar = plugin:CreateToolbar("Claude Bridge")
+local toolbar = plugin:CreateToolbar("Brickbot")
 local toggleButton = toolbar:CreateButton(
-	"Claude Bridge",
-	"Open the Claude Bridge panel",
+	"Brickbot",
+	"Open the Brickbot panel",
 	"rbxasset://textures/ui/GuiImagePlaceholder.png"
 )
 toggleButton.ClickableWhenViewportHidden = true
 
 local widgetInfo = DockWidgetPluginGuiInfo.new(Enum.InitialDockState.Float, false, true, 320, 360, 300, 320)
-local widget = plugin:CreateDockWidgetPluginGui("ClaudeBridgePanel", widgetInfo)
-widget.Title = "Claude Bridge"
+local widget = plugin:CreateDockWidgetPluginGui("BrickbotPanel", widgetInfo)
+widget.Title = "Brickbot"
 
 local root = Instance.new("Frame")
 root.Size = UDim2.fromScale(1, 1)
@@ -130,7 +130,7 @@ titleLabel.Font = Enum.Font.GothamBold
 titleLabel.TextSize = 15
 titleLabel.TextXAlignment = Enum.TextXAlignment.Left
 titleLabel.TextColor3 = C.text
-titleLabel.Text = "Claude Bridge"
+titleLabel.Text = "Brickbot"
 titleLabel.Parent = header
 
 local subtitleLabel = Instance.new("TextLabel")
@@ -141,7 +141,7 @@ subtitleLabel.Font = Enum.Font.Gotham
 subtitleLabel.TextSize = 11
 subtitleLabel.TextXAlignment = Enum.TextXAlignment.Left
 subtitleLabel.TextColor3 = C.muted
-subtitleLabel.Text = "Roblox Studio ↔ Claude"
+subtitleLabel.Text = "AI ↔ Roblox Studio"
 subtitleLabel.Parent = header
 
 local statusDot = Instance.new("Frame")

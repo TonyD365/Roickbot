@@ -34,7 +34,7 @@ console.log(`Launching app headlessly: ${electronPath} ${appDir}`);
 // --no-sandbox / --disable-gpu：便于在 CI / root 容器的无头环境里启动。
 const child = spawn("xvfb-run", ["-a", electronPath, appDir, "--no-sandbox", "--disable-gpu"], {
   cwd: appDir,
-  env: { ...process.env, CLAUDE_RBX_DEBUG: "0" },
+  env: { ...process.env, BRICKBOT_DEBUG: "0" },
   detached: true,
 });
 
