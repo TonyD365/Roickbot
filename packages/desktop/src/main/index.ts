@@ -9,7 +9,7 @@ import { createWriteStream } from "node:fs";
 // electron-updater 是 CommonJS 具名导出，必须具名导入（它没有 default 导出）。
 import { autoUpdater } from "electron-updater";
 
-const REPO = "TonyD365/Claude-for-Roblox-Studio";
+const REPO = "TonyD365/Brickbot";
 const isMac = process.platform === "darwin";
 
 // core 是 ESM-only 包，从 CommonJS 主进程通过动态 import 加载，故这里用宽松类型。
@@ -459,7 +459,7 @@ if (!app.requestSingleInstanceLock()) {
           "### Fixes\n\n" +
           "- No more false disconnects during long commands\n" +
           "- Reliable handshake with retries\n\n" +
-          "See the [full release notes](https://github.com/TonyD365/Claude-for-Roblox-Studio/releases) for details.",
+          "See the [full release notes](https://github.com/TonyD365/Brickbot/releases) for details.",
       };
     }
 
