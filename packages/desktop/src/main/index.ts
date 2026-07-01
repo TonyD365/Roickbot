@@ -27,6 +27,7 @@ interface CoreStatus {
 
 let win: BrowserWindow | null = null;
 let tray: Tray | null = null;
+let trayMenu: Menu | null = null; // 托盘右键弹出的菜单（不 setContextMenu，以免 mac 左键也弹菜单）
 
 interface PendingUpdate {
   version: string;
@@ -89,6 +90,12 @@ function createWindow(): void {
   void win.loadFile(join(__dirname, "..", "renderer", "index.html"));
   if (DEBUG) win.webContents.openDevTools({ mode: "detach" });
 
+  // 窗口关闭后置空引用：macOS 关窗不退出，之后从 Dock/托盘触发动作时
+  // 若还向已销毁的窗口发消息会抛 "Object has been destroyed"。
+  win.on("closed", () => {
+    win = null;
+  });
+
   // 开发用：CLAUDE_RBX_SCREENSHOT=<path> 时，加载后截图保存（供 UI 迭代验证）。
   if (process.env.CLAUDE_RBX_SCREENSHOT) {
     win.webContents.on("did-finish-load", () => {
@@ -104,6 +111,11 @@ function createWindow(): void {
       }, 700);
     });
   }
+}
+
+/** 安全地向渲染进程发消息：窗口已关闭/销毁时静默忽略（防 "Object has been destroyed"）。 */
+function sendToRenderer(channel: string, payload?: unknown): void {
+  if (win && !win.isDestroyed()) win.webContents.send(channel, payload);
 }
 
 /** 显示（或新建）主窗口并聚焦。 */
@@ -252,11 +264,13 @@ function menuTemplate(): MenuItemConstructorOptions[] {
   ];
 }
 
-/** 重建并应用托盘 + macOS Dock 的右键菜单。 */
+/** 重建托盘右键菜单 + macOS 底部 Dock 菜单（随服务状态刷新）。 */
 function updateMenus(): void {
   try {
     const menu = Menu.buildFromTemplate(menuTemplate());
-    if (tray && !tray.isDestroyed()) tray.setContextMenu(menu);
+    // 托盘：不 setContextMenu（否则 mac 左键也会弹菜单），改为右键手动 popUp。
+    trayMenu = menu;
+    // 底部 Dock（原生右键菜单）。
     if (isMac && app.dock) app.dock.setMenu(menu);
   } catch (e) {
     console.error("[main] failed to update menus:", e);
@@ -278,7 +292,11 @@ function createTray(): void {
     } else {
       tray = new Tray(image);
       tray.setToolTip(`Claude for Roblox Studio v${app.getVersion()}`);
+      // 左键：打开/聚焦窗口（若已关则新建）。右键：弹出选项菜单（不打开窗口）。
       tray.on("click", () => showWindow());
+      tray.on("right-click", () => {
+        if (tray && trayMenu) tray.popUpContextMenu(trayMenu);
+      });
     }
   } catch (e) {
     console.error("[main] failed to create tray:", e);
@@ -373,7 +391,7 @@ function fetchChangelog(version: string): Promise<string> {
 async function announceUpdate(version: string, kind: "win" | "mac", url?: string): Promise<void> {
   const notes = await fetchChangelog(version);
   pendingUpdate = { version, notes, kind, url };
-  win?.webContents.send("update-available", pendingUpdate);
+  sendToRenderer("update-available", pendingUpdate);
 }
 
 /** 后台检查更新（每次启动时）。mac 未签名时无法自动安装，仅记录日志。 */
@@ -450,10 +468,10 @@ if (!app.requestSingleInstanceLock()) {
       core = await import("@claude-roblox/core");
       service = new core.CoreService({ tokenPath: join(app.getPath("userData"), "token") });
       service.on("status", (s: CoreStatus) => {
-        win?.webContents.send("status", s);
+        sendToRenderer("status", s);
         updateMenus(); // Start/Stop 标签、token 相关项随状态刷新
       });
-      service.on("handshake", (info: unknown) => win?.webContents.send("handshake", info));
+      service.on("handshake", (info: unknown) => sendToRenderer("handshake", info));
       console.log("[main] core service loaded");
       updateMenus(); // core 加载后 token 已可用 → 刷新菜单可用项
     } catch (e) {
