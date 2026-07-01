@@ -1,7 +1,8 @@
 // Electron 主进程：启停核心服务、管理 UI、处理 IPC、后台自动更新。
 // 主进程为 CommonJS；核心包是 ESM-only，故通过动态 import 加载。
 
-import { app, BrowserWindow, ipcMain, dialog, shell, net } from "electron";
+import { app, BrowserWindow, ipcMain, dialog, shell, net, Tray, Menu, nativeImage, clipboard } from "electron";
+import type { MenuItemConstructorOptions } from "electron";
 import { join } from "node:path";
 import { copyFile } from "node:fs/promises";
 import { createWriteStream } from "node:fs";
@@ -25,6 +26,7 @@ interface CoreStatus {
 }
 
 let win: BrowserWindow | null = null;
+let tray: Tray | null = null;
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let core: any;
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -78,89 +80,218 @@ function createWindow(): void {
 
   void win.loadFile(join(__dirname, "..", "renderer", "index.html"));
   if (DEBUG) win.webContents.openDevTools({ mode: "detach" });
+
+  // 开发用：CLAUDE_RBX_SCREENSHOT=<path> 时，加载后截图保存（供 UI 迭代验证）。
+  if (process.env.CLAUDE_RBX_SCREENSHOT) {
+    win.webContents.on("did-finish-load", () => {
+      setTimeout(() => {
+        void win!.webContents
+          .capturePage()
+          .then(async (img) => {
+            const { writeFileSync } = await import("node:fs");
+            writeFileSync(process.env.CLAUDE_RBX_SCREENSHOT!, img.toPNG());
+            console.log("[main] screenshot saved");
+          })
+          .catch((e) => console.error("[main] screenshot failed:", e));
+      }, 700);
+    });
+  }
+}
+
+/** 显示（或新建）主窗口并聚焦。 */
+function showWindow(): void {
+  if (!win || win.isDestroyed()) {
+    createWindow();
+    return;
+  }
+  if (win.isMinimized()) win.restore();
+  win.show();
+  win.focus();
+}
+
+// ---- 共享动作（IPC 与 托盘/Dock 菜单都用这些） ----
+const MCP_CLIENT_MENU: { id: McpClient; label: string }[] = [
+  { id: "claude", label: "Claude Code" },
+  { id: "cursor", label: "Cursor" },
+  { id: "gemini", label: "Gemini CLI" },
+  { id: "cline", label: "Cline" },
+  { id: "vscode", label: "VS Code" },
+];
+
+function requireService(): NonNullable<typeof service> {
+  if (!service) throw new Error("Core service is not loaded yet — check the terminal/DevTools for errors.");
+  return service;
+}
+/** 弹窗需要的父窗口（窗口已关则返回 undefined，让对话框成为应用级模态）。 */
+function parentWin(): BrowserWindow | undefined {
+  return win && !win.isDestroyed() ? win : undefined;
+}
+// 有窗口就带父窗口弹，否则弹应用级对话框（从托盘/Dock 菜单触发时窗口可能已关）。
+function showSave(options: Electron.SaveDialogOptions): Promise<Electron.SaveDialogReturnValue> {
+  const p = parentWin();
+  return p ? dialog.showSaveDialog(p, options) : dialog.showSaveDialog(options);
+}
+function showMessage(options: Electron.MessageBoxOptions): Promise<Electron.MessageBoxReturnValue> {
+  const p = parentWin();
+  return p ? dialog.showMessageBox(p, options) : dialog.showMessageBox(options);
+}
+
+async function startService(): Promise<CoreStatus> {
+  const s = requireService();
+  try {
+    await s.start();
+  } catch (e: unknown) {
+    if (e && (e as { code?: string }).code === "EADDRINUSE") {
+      throw new Error(`Port ${s.port} is already in use — another instance may be running.`);
+    }
+    throw e;
+  }
+  return s.getStatus();
+}
+async function stopService(): Promise<CoreStatus> {
+  const s = requireService();
+  await s.stop();
+  return s.getStatus();
+}
+function copyToken(): boolean {
+  const t = service ? service.getToken() : "";
+  if (t) clipboard.writeText(t);
+  return !!t;
+}
+async function rotateToken(): Promise<string> {
+  const t = await requireService().rotateToken();
+  updateMenus();
+  return t;
+}
+/** 弹保存框把内置插件写到用户选择的位置。 */
+async function installPlugin(): Promise<{ saved: boolean; path?: string }> {
+  const result = await showSave({
+    title: "Save Claude Bridge plugin",
+    defaultPath: "ClaudeBridge.rbxmx",
+    filters: [{ name: "Roblox plugin", extensions: ["rbxmx"] }],
+  });
+  if (result.canceled || !result.filePath) return { saved: false };
+  await copyFile(pluginArtifactPath(), result.filePath);
+  return { saved: true, path: result.filePath };
+}
+/** 按所选客户端格式写入 MCP 配置（自动/选位置）。 */
+async function writeConfig(clientId?: string): Promise<{ written: boolean; cancelled?: boolean; path?: string; client?: McpClient }> {
+  const s = requireService();
+  if (!s.isRunning()) await s.start();
+  const client = (clientId as McpClient) || "claude";
+  const info = core.clientInfo(client);
+
+  let target: string | undefined;
+  if (info.defaultPath) {
+    const choice = await showMessage({
+      type: "question",
+      buttons: ["Auto-install", "Choose location…", "Cancel"],
+      defaultId: 0,
+      cancelId: 2,
+      message: `Install the ${info.label} MCP config`,
+      detail:
+        `Auto-install writes the server entry to ${info.defaultPath}.\n` +
+        `Or choose a specific config file location.\n\n${info.note}`,
+    });
+    if (choice.response === 2) return { written: false, cancelled: true };
+    if (choice.response === 0) target = info.defaultPath;
+  }
+  if (!target) {
+    const r = await showSave({
+      title: `Save ${info.label} MCP config`,
+      defaultPath: defaultConfigFilename(client),
+      filters: [{ name: "MCP config", extensions: ["json"] }],
+    });
+    if (r.canceled || !r.filePath) return { written: false, cancelled: true };
+    target = r.filePath;
+  }
+  const res = await core.writeClientConfig(client, target, s.port, s.getToken());
+  return { written: true, path: res.path, client };
+}
+
+/** 菜单点击包装：捕获错误弹到对话框，避免未处理异常。 */
+function menuAction(fn: () => unknown | Promise<unknown>): () => void {
+  return () => {
+    Promise.resolve()
+      .then(fn)
+      .catch((e) => dialog.showErrorBox("Claude for Roblox Studio", String((e as Error)?.message ?? e)));
+  };
+}
+
+/** 托盘 / Dock 菜单模板（随服务状态动态变化）。 */
+function menuTemplate(): MenuItemConstructorOptions[] {
+  const running = service?.isRunning() ?? false;
+  const hasToken = !!(service && service.getToken());
+  return [
+    { label: "Open Claude for Roblox Studio", click: () => showWindow() },
+    { type: "separator" },
+    {
+      label: running ? "Stop service" : "Start service",
+      click: menuAction(() => (running ? stopService() : startService())),
+    },
+    { type: "separator" },
+    { label: "Install Studio plugin…", click: menuAction(installPlugin) },
+    {
+      label: "Install MCP config",
+      submenu: MCP_CLIENT_MENU.map((c) => ({ label: c.label, click: menuAction(() => writeConfig(c.id)) })),
+    },
+    { type: "separator" },
+    { label: "Copy connection token", enabled: hasToken, click: () => void copyToken() },
+    { label: "Rotate token…", enabled: hasToken, click: menuAction(rotateToken) },
+    { type: "separator" },
+    { label: `Version ${app.getVersion()}`, enabled: false },
+    { label: "Quit", role: "quit" },
+  ];
+}
+
+/** 重建并应用托盘 + macOS Dock 的右键菜单。 */
+function updateMenus(): void {
+  try {
+    const menu = Menu.buildFromTemplate(menuTemplate());
+    if (tray && !tray.isDestroyed()) tray.setContextMenu(menu);
+    if (isMac && app.dock) app.dock.setMenu(menu);
+  } catch (e) {
+    console.error("[main] failed to update menus:", e);
+  }
+}
+
+/** 创建菜单栏 / 系统托盘图标（macOS 用模板图，自动适配深浅色）。 */
+function createTray(): void {
+  if (tray) return;
+  try {
+    const assetPath = (name: string) => join(__dirname, "..", "assets", name);
+    const image = isMac
+      ? nativeImage.createFromPath(assetPath("trayTemplate.png"))
+      : nativeImage.createFromPath(assetPath("tray.png"));
+    if (isMac) image.setTemplateImage(true);
+    // 图标缺失时 image 为空 —— 此时跳过，避免出现一个不可见/占位的托盘项。
+    if (image.isEmpty()) {
+      console.warn("[main] tray image missing; skipping tray");
+    } else {
+      tray = new Tray(image);
+      tray.setToolTip(`Claude for Roblox Studio v${app.getVersion()}`);
+      tray.on("click", () => showWindow());
+    }
+  } catch (e) {
+    console.error("[main] failed to create tray:", e);
+  }
+  updateMenus(); // 同时设置 Dock 菜单（即便托盘创建失败）。
 }
 
 function registerIpc(): void {
-  const needService = () => {
-    if (!service) throw new Error("Core service is not loaded yet — check the terminal/DevTools for errors.");
-    return service;
-  };
-
   ipcMain.handle("get-version", () => app.getVersion());
   ipcMain.handle("get-status", (): CoreStatus | null => (service ? service.getStatus() : null));
   ipcMain.handle("get-token", (): string => (service ? service.getToken() : ""));
-
-  ipcMain.handle("start-service", async () => {
-    try {
-      await needService().start();
-    } catch (e: unknown) {
-      if (e && (e as { code?: string }).code === "EADDRINUSE") {
-        throw new Error(`Port ${service.port} is already in use — another instance may be running.`);
-      }
-      throw e;
-    }
-    return service.getStatus();
-  });
-  ipcMain.handle("stop-service", async () => {
-    await needService().stop();
-    return service.getStatus();
-  });
-  ipcMain.handle("rotate-token", async () => needService().rotateToken());
   ipcMain.handle("get-activity", (_e, limit?: number) =>
     service ? service.getRecentActivity(limit ?? 30) : { commands: [], events: [] },
   );
 
-  // "Install MCP config"：按所选客户端的正确格式写入。
-  // 路径固定的客户端(Claude/Cursor/Gemini)给「自动安装 / 选位置」二选一；
-  // 路径不固定的(Cline/VS Code)直接弹保存框，但内容仍按该客户端格式生成。
-  ipcMain.handle("write-config", async (_e, clientId?: string) => {
-    const s = needService();
-    if (!s.isRunning()) await s.start();
-
-    const client = (clientId as McpClient) || "claude";
-    const info = core.clientInfo(client);
-
-    let target: string | undefined;
-    if (info.defaultPath) {
-      const choice = await dialog.showMessageBox(win!, {
-        type: "question",
-        buttons: ["Auto-install", "Choose location…", "Cancel"],
-        defaultId: 0,
-        cancelId: 2,
-        message: `Install the ${info.label} MCP config`,
-        detail:
-          `Auto-install writes the server entry to ${info.defaultPath}.\n` +
-          `Or choose a specific config file location.\n\n${info.note}`,
-      });
-      if (choice.response === 2) return { written: false, cancelled: true };
-      if (choice.response === 0) target = info.defaultPath;
-    }
-
-    if (!target) {
-      const r = await dialog.showSaveDialog(win!, {
-        title: `Save ${info.label} MCP config`,
-        defaultPath: defaultConfigFilename(client),
-        filters: [{ name: "MCP config", extensions: ["json"] }],
-      });
-      if (r.canceled || !r.filePath) return { written: false, cancelled: true };
-      target = r.filePath;
-    }
-
-    const res = await core.writeClientConfig(client, target, s.port, s.getToken());
-    return { written: true, path: res.path, client };
-  });
-
-  // "Install Plugin"：弹文件保存框，用户自选位置，把内置插件写过去。
-  ipcMain.handle("install-plugin", async () => {
-    const result = await dialog.showSaveDialog(win!, {
-      title: "Save Claude Bridge plugin",
-      defaultPath: "ClaudeBridge.rbxmx",
-      filters: [{ name: "Roblox plugin", extensions: ["rbxmx"] }],
-    });
-    if (result.canceled || !result.filePath) return { saved: false };
-    await copyFile(pluginArtifactPath(), result.filePath);
-    return { saved: true, path: result.filePath };
-  });
+  // 服务/配置动作复用 tray/Dock 菜单同一套函数。
+  ipcMain.handle("start-service", () => startService());
+  ipcMain.handle("stop-service", () => stopService());
+  ipcMain.handle("rotate-token", () => rotateToken());
+  ipcMain.handle("write-config", (_e, clientId?: string) => writeConfig(clientId));
+  ipcMain.handle("install-plugin", () => installPlugin());
 
   ipcMain.handle("open-external", (_e, url: string) => shell.openExternal(url));
   ipcMain.handle("restart-to-update", () => autoUpdater.quitAndInstall());
@@ -243,25 +374,24 @@ function startAutoUpdate(): void {
 if (!app.requestSingleInstanceLock()) {
   app.quit();
 } else {
-  app.on("second-instance", () => {
-    if (win) {
-      if (win.isMinimized()) win.restore();
-      win.show();
-      win.focus();
-    }
-  });
+  app.on("second-instance", () => showWindow());
 
   void app.whenReady().then(async () => {
     // 先建窗口 + 注册 IPC，保证即使 core 加载失败也有界面和报错可看。
     registerIpc();
     createWindow();
+    createTray();
 
     try {
       core = await import("@claude-roblox/core");
       service = new core.CoreService({ tokenPath: join(app.getPath("userData"), "token") });
-      service.on("status", (s: CoreStatus) => win?.webContents.send("status", s));
+      service.on("status", (s: CoreStatus) => {
+        win?.webContents.send("status", s);
+        updateMenus(); // Start/Stop 标签、token 相关项随状态刷新
+      });
       service.on("handshake", (info: unknown) => win?.webContents.send("handshake", info));
       console.log("[main] core service loaded");
+      updateMenus(); // core 加载后 token 已可用 → 刷新菜单可用项
     } catch (e) {
       console.error("[main] failed to load core service:", e);
       dialog.showErrorBox("Failed to start", String(e));

@@ -4,45 +4,150 @@
     <meta charset="UTF-8" />
     <title>Claude for Roblox Studio</title>
     <style>
-      :root { color-scheme: dark; }
+      :root {
+        color-scheme: dark;
+        --bg: #141320;
+        --card: #1d1c2a;
+        --card-2: #232131;
+        --border: rgba(255, 255, 255, 0.07);
+        --border-strong: rgba(255, 255, 255, 0.12);
+        --text: #ecebf5;
+        --muted: #9b98b3;
+        --faint: #6f6c85;
+        --accent: #7c6cf6;
+        --accent-2: #5b49e6;
+        --coral: #f2a088;
+        --good: #46c98b;
+        --bad: #f0616d;
+        --idle: #f5b544;
+        --blue: #59b6ff;
+      }
+      * { box-sizing: border-box; }
       body {
         font-family: -apple-system, "Segoe UI", system-ui, sans-serif;
-        margin: 0; padding: 24px; background: #1e1f22; color: #e6e6e6;
+        margin: 0;
+        padding: 22px 22px 26px;
+        color: var(--text);
+        font-size: 14px;
+        line-height: 1.45;
+        background:
+          radial-gradient(120% 60% at 50% -10%, rgba(124, 108, 246, 0.22), transparent 60%),
+          var(--bg);
+        -webkit-font-smoothing: antialiased;
       }
-      h1 { font-size: 18px; margin: 0 0 4px; }
-      .sub { color: #9aa0a6; font-size: 12px; margin-bottom: 20px; }
-      .card { background: #2b2d31; border-radius: 10px; padding: 16px; margin-bottom: 14px; }
-      .row { display: flex; align-items: center; justify-content: space-between; margin: 8px 0; }
-      .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; margin-right: 8px; }
-      .on { background: #3ba55d; } .off { background: #ed4245; } .idle { background: #faa61a; }
+      ::-webkit-scrollbar { width: 9px; }
+      ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.1); border-radius: 6px; }
+      ::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.18); }
+
+      /* ---- header ---- */
+      header { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+      header .mark { flex: none; filter: drop-shadow(0 4px 10px rgba(20, 12, 60, 0.5)); }
+      header h1 { font-size: 17px; font-weight: 650; margin: 0; letter-spacing: -0.01em; }
+      header .sub { color: var(--muted); font-size: 11.5px; margin-top: 2px; }
+
+      /* ---- cards ---- */
+      .card {
+        background: linear-gradient(180deg, var(--card-2), var(--card));
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        padding: 6px 16px;
+        margin-bottom: 13px;
+        box-shadow: 0 1px 0 rgba(255, 255, 255, 0.03) inset, 0 8px 24px rgba(0, 0, 0, 0.28);
+      }
+      .card.pad { padding: 15px 16px; }
+      .row {
+        display: flex; align-items: center; justify-content: space-between;
+        gap: 12px; padding: 11px 0;
+      }
+      .row + .row { border-top: 1px solid var(--border); }
+      .status { display: flex; align-items: center; gap: 10px; min-width: 0; }
+      .status .txt { font-size: 13px; font-weight: 500; }
+      .status .txt small { display: block; color: var(--faint); font-size: 10.5px; font-weight: 400; }
+
+      /* ---- status dot ---- */
+      .dot { width: 9px; height: 9px; border-radius: 50%; flex: none; background: var(--faint); transition: 0.25s; }
+      .dot.on { background: var(--good); box-shadow: 0 0 0 3px rgba(70, 201, 139, 0.18); }
+      .dot.off { background: var(--bad); box-shadow: 0 0 0 3px rgba(240, 97, 109, 0.16); }
+      .dot.idle { background: var(--idle); box-shadow: 0 0 0 3px rgba(245, 181, 68, 0.16); }
+
+      /* ---- buttons ---- */
       button {
-        background: #5865f2; color: #fff; border: none; border-radius: 6px;
-        padding: 8px 14px; font-size: 13px; cursor: pointer;
+        font: inherit; font-size: 12.5px; font-weight: 550; cursor: pointer;
+        color: #fff; border: none; border-radius: 9px; padding: 8px 14px;
+        background: linear-gradient(180deg, var(--accent), var(--accent-2));
+        box-shadow: 0 2px 8px rgba(91, 73, 230, 0.35); transition: 0.15s; white-space: nowrap;
       }
-      button.secondary { background: #4e5058; }
-      button:disabled { opacity: 0.5; cursor: default; }
-      .link { background: none; color: #00a8fc; padding: 2px 0; font-size: 12px; text-decoration: underline; }
+      button:hover { filter: brightness(1.08); transform: translateY(-1px); }
+      button:active { transform: translateY(0); filter: brightness(0.96); }
+      button.secondary {
+        background: rgba(255, 255, 255, 0.06); color: var(--text);
+        border: 1px solid var(--border-strong); box-shadow: none;
+      }
+      button.secondary:hover { background: rgba(255, 255, 255, 0.1); }
+      button:disabled { opacity: 0.45; cursor: default; transform: none; filter: none; }
+      .link {
+        background: none; border: none; color: var(--blue); padding: 4px 2px;
+        font-size: 12px; font-weight: 500; box-shadow: none; cursor: pointer;
+      }
+      .link:hover { text-decoration: underline; transform: none; filter: none; }
+      select.secondary { padding: 7px 10px; }
+      .actions { display: flex; gap: 8px; align-items: center; }
+
+      /* ---- labels / token / code ---- */
+      .label {
+        color: var(--muted); font-size: 10.5px; font-weight: 600;
+        text-transform: uppercase; letter-spacing: 0.06em; margin: 13px 0 8px;
+      }
       code, .token {
-        font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 11px;
-        background: #1e1f22; padding: 6px 8px; border-radius: 4px; word-break: break-all; display: block;
+        font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+        background: rgba(0, 0, 0, 0.32); border: 1px solid var(--border);
+        border-radius: 8px; font-size: 11px; color: #d7d4ea;
       }
-      .label { color: #9aa0a6; font-size: 12px; }
-      .small { font-size: 11px; color: #9aa0a6; margin-top: 4px; }
+      code { padding: 2px 6px; }
+      .token { display: block; padding: 11px 12px; word-break: break-all; letter-spacing: 0.02em; }
+      .small { font-size: 11px; color: var(--muted); margin-top: 4px; line-height: 1.5; }
+      .hint { color: var(--faint); }
+
       /* !important：否则 .banner 的 display:flex 因定义在后会压过 .hidden，导致横幅永远显示。 */
       .hidden { display: none !important; }
-      .banner { background: #3ba55d; color: #fff; border-radius: 8px; padding: 10px 14px; margin-bottom: 14px;
-        display: flex; align-items: center; justify-content: space-between; }
-      .error { background: #ed4245; }
-      .activity { max-height: 160px; overflow-y: auto; margin-top: 8px; }
-      .ev { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 11px;
-        padding: 3px 0; border-bottom: 1px solid #232428; display: flex; gap: 8px; }
-      .ev .t { color: #6b7178; white-space: nowrap; }
-      .ev .ok { color: #3ba55d; } .ev .bad { color: #ed4245; } .ev .info { color: #00a8fc; }
+      .banner {
+        display: flex; align-items: center; justify-content: space-between; gap: 12px;
+        border-radius: 12px; padding: 12px 15px; margin-bottom: 13px; font-size: 12.5px; font-weight: 500;
+        background: linear-gradient(180deg, rgba(70, 201, 139, 0.18), rgba(70, 201, 139, 0.1));
+        border: 1px solid rgba(70, 201, 139, 0.4); color: #b6f2d5;
+      }
+      .banner.error {
+        background: linear-gradient(180deg, rgba(240, 97, 109, 0.18), rgba(240, 97, 109, 0.1));
+        border-color: rgba(240, 97, 109, 0.4); color: #ffc9cf;
+      }
+      .banner button { background: rgba(255, 255, 255, 0.14); box-shadow: none; }
+
+      /* ---- activity ---- */
+      .activity { max-height: 168px; overflow-y: auto; margin: 2px 0 4px; }
+      .ev {
+        font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 11px;
+        display: flex; gap: 10px; align-items: baseline; padding: 5px 0;
+      }
+      .ev + .ev { border-top: 1px solid rgba(255, 255, 255, 0.045); }
+      .ev .t { color: var(--faint); white-space: nowrap; }
+      .ev .m { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .ev .ok { color: var(--good); } .ev .bad { color: var(--bad); } .ev .info { color: var(--blue); }
+      #msg { font-size: 11.5px; color: var(--coral); min-height: 16px; margin-top: 2px; }
     </style>
   </head>
   <body>
-    <h1>Claude for Roblox Studio</h1>
-    <div id="sub" class="sub">Bridge between Claude Code and Roblox Studio.</div>
+    <header>
+      <svg class="mark" width="38" height="38" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <polygon points="20,4 33,11.5 20,19 7,11.5" fill="#ffffff"/>
+        <polygon points="7,11.5 20,19 20,34 7,26.5" fill="#d3ccf7"/>
+        <polygon points="20,19 33,11.5 33,26.5 20,34" fill="#b3a8ee"/>
+        <path d="M33,3 C34,7 35.4,8.4 39.5,9.4 C35.4,10.4 34,11.8 33,15.8 C32,11.8 30.6,10.4 26.5,9.4 C30.6,8.4 32,7 33,3 Z" fill="#f2a088"/>
+      </svg>
+      <div>
+        <h1>Claude for Roblox Studio</h1>
+        <div id="sub" class="sub">Bridge between Claude Code and Roblox Studio.</div>
+      </div>
+    </header>
 
     <div id="apiError" class="banner error hidden">
       <span>Failed to initialize (window.api missing). See DevTools console.</span>
@@ -60,19 +165,31 @@
 
     <div class="card">
       <div class="row">
-        <div><span id="serviceDot" class="dot off"></span><span id="serviceText">Service stopped</span></div>
+        <div class="status">
+          <span id="serviceDot" class="dot off"></span>
+          <span class="txt" id="serviceText">Service stopped</span>
+        </div>
         <button id="toggleService">Start service</button>
       </div>
       <div class="row">
-        <div><span id="pluginDot" class="dot off"></span><span id="pluginText">Plugin offline</span></div>
+        <div class="status">
+          <span id="pluginDot" class="dot off"></span>
+          <span class="txt" id="pluginText">Plugin offline</span>
+        </div>
         <button id="installPlugin" class="link">Install plugin</button>
       </div>
       <div class="row">
-        <div><span id="agentDot" class="dot off"></span><span id="agentText">Runtime agent off (starts with a test)</span></div>
+        <div class="status">
+          <span id="agentDot" class="dot off"></span>
+          <span class="txt" id="agentText">Runtime agent off (starts with a test)</span>
+        </div>
       </div>
       <div class="row">
-        <div><span id="claudeDot" class="dot off"></span><span id="claudeText">Claude Code not connected</span></div>
-        <div style="display:flex;gap:6px;align-items:center;">
+        <div class="status">
+          <span id="claudeDot" class="dot off"></span>
+          <span class="txt" id="claudeText">Claude Code not connected</span>
+        </div>
+        <div class="actions">
           <select id="clientSelect" class="secondary" title="Choose your AI client">
             <option value="claude">Claude Code</option>
             <option value="cursor">Cursor</option>
@@ -85,25 +202,25 @@
       </div>
     </div>
 
-    <div class="card">
-      <div class="label">Connection token (paste this into the Studio plugin)</div>
+    <div class="card pad">
+      <div class="label" style="margin-top:2px;">Connection token · paste into the Studio plugin</div>
       <div id="token" class="token">—</div>
-      <div class="row" style="margin-top:10px;">
+      <div class="actions" style="margin-top:11px;">
         <button id="copyToken" class="secondary">Copy token</button>
         <button id="rotateToken" class="link">Rotate token</button>
       </div>
-      <div class="small">
-        In Roblox Studio: open the Claude Bridge plugin, paste this token, and click Connect.
-        Make sure HTTP requests are enabled (<code>game:GetService("HttpService").HttpEnabled = true</code>).
+      <div class="small hint">
+        In Studio: open the Claude Bridge plugin, paste this token, click Connect. Make sure HTTP is enabled
+        (<code>game:GetService("HttpService").HttpEnabled = true</code>).
       </div>
     </div>
 
-    <div class="card">
-      <div class="label">Activity (recent commands &amp; events)</div>
+    <div class="card pad">
+      <div class="label" style="margin-top:2px;">Activity · recent commands &amp; events</div>
       <div id="activity" class="activity"><div class="small">No activity yet.</div></div>
     </div>
 
-    <div id="msg" class="small"></div>
+    <div id="msg"></div>
 
     <script src="renderer.js"></script>
   </body>

@@ -72,13 +72,13 @@
     for (const c of act.commands || []) {
       const cls = c.ok === false ? "bad" : c.ok === true ? "ok" : "info";
       const status = c.ok === false ? `✗ ${c.error || "error"}` : c.ok === true ? "✓" : "…";
-      rows.push({ at: c.at, html: `<span class="t">${fmtTime(c.at)}</span><span>${c.channel}: ${c.tool}</span><span class="${cls}">${status}</span>` });
+      rows.push({ at: c.at, html: `<span class="t">${fmtTime(c.at)}</span><span class="m">${c.channel}: ${c.tool}</span><span class="${cls}">${status}</span>` });
     }
     for (const e of act.events || []) {
-      const label = e.type === "runState" ? `event: runState → ${e.state}`
-        : e.type === "output" ? `event: ${e.messageType || "output"}`
-        : `event: ${e.type}`;
-      rows.push({ at: e.at, html: `<span class="t">${fmtTime(e.at)}</span><span class="info">${label}</span>` });
+      const label = e.type === "runState" ? `runState → ${e.state}`
+        : e.type === "output" ? `${e.messageType || "output"}`
+        : `${e.type}`;
+      rows.push({ at: e.at, html: `<span class="t">${fmtTime(e.at)}</span><span class="m info">${label}</span>` });
     }
     rows.sort((a, b) => b.at - a.at);
     box.innerHTML = rows.length

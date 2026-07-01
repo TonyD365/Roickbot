@@ -23,6 +23,43 @@ local function wsUrl(): string
 end
 
 ------------------------------------------------------------------- UI
+-- 品牌配色（与桌面 App 一致）。
+local C = {
+	bg = Color3.fromRGB(23, 22, 31),
+	surface = Color3.fromRGB(14, 13, 20),
+	brand = Color3.fromRGB(124, 108, 246),
+	brandHover = Color3.fromRGB(140, 125, 255),
+	coral = Color3.fromRGB(242, 160, 136),
+	text = Color3.fromRGB(236, 235, 245),
+	muted = Color3.fromRGB(155, 152, 179),
+	faint = Color3.fromRGB(111, 108, 133),
+	good = Color3.fromRGB(70, 201, 139),
+	bad = Color3.fromRGB(240, 97, 109),
+	idle = Color3.fromRGB(245, 181, 68),
+	line = Color3.fromRGB(48, 46, 62),
+}
+
+local function corner(inst: Instance, r: number)
+	local c = Instance.new("UICorner")
+	c.CornerRadius = UDim.new(0, r)
+	c.Parent = inst
+end
+local function padAll(inst: Instance, l: number, t: number, r: number, b: number)
+	local p = Instance.new("UIPadding")
+	p.PaddingLeft = UDim.new(0, l)
+	p.PaddingTop = UDim.new(0, t)
+	p.PaddingRight = UDim.new(0, r)
+	p.PaddingBottom = UDim.new(0, b)
+	p.Parent = inst
+end
+local function stroke(inst: Instance, color: Color3, thickness: number, transparency: number)
+	local s = Instance.new("UIStroke")
+	s.Color = color
+	s.Thickness = thickness
+	s.Transparency = transparency
+	s.Parent = inst
+end
+
 local toolbar = plugin:CreateToolbar("Claude Bridge")
 local toggleButton = toolbar:CreateButton(
 	"Claude Bridge",
@@ -31,74 +68,174 @@ local toggleButton = toolbar:CreateButton(
 )
 toggleButton.ClickableWhenViewportHidden = true
 
-local widgetInfo = DockWidgetPluginGuiInfo.new(Enum.InitialDockState.Float, false, true, 320, 280, 280, 240)
+local widgetInfo = DockWidgetPluginGuiInfo.new(Enum.InitialDockState.Float, false, true, 320, 360, 300, 320)
 local widget = plugin:CreateDockWidgetPluginGui("ClaudeBridgePanel", widgetInfo)
 widget.Title = "Claude Bridge"
 
 local root = Instance.new("Frame")
 root.Size = UDim2.fromScale(1, 1)
-root.BackgroundColor3 = Color3.fromRGB(46, 46, 46)
+root.BackgroundColor3 = C.bg
 root.BorderSizePixel = 0
 root.Parent = widget
 
 local layout = Instance.new("UIListLayout")
-layout.Padding = UDim.new(0, 8)
+layout.Padding = UDim.new(0, 12)
 layout.SortOrder = Enum.SortOrder.LayoutOrder
 layout.FillDirection = Enum.FillDirection.Vertical
 layout.Parent = root
+padAll(root, 16, 16, 16, 16)
 
-local padding = Instance.new("UIPadding")
-padding.PaddingTop = UDim.new(0, 10)
-padding.PaddingLeft = UDim.new(0, 10)
-padding.PaddingRight = UDim.new(0, 10)
-padding.Parent = root
+-- ---- header：logo + 标题 + 状态点 ----
+local header = Instance.new("Frame")
+header.Size = UDim2.new(1, 0, 0, 38)
+header.BackgroundTransparency = 1
+header.LayoutOrder = 1
+header.Parent = root
 
-local function label(text: string, order: number, color: Color3?): TextLabel
-	local l = Instance.new("TextLabel")
-	l.Size = UDim2.new(1, 0, 0, 20)
-	l.BackgroundTransparency = 1
-	l.TextColor3 = color or Color3.fromRGB(230, 230, 230)
-	l.TextXAlignment = Enum.TextXAlignment.Left
-	l.TextWrapped = true
-	l.Font = Enum.Font.Gotham
-	l.TextSize = 13
-	l.Text = text
-	l.LayoutOrder = order
-	l.Parent = root
-	return l
+local logo = Instance.new("Frame")
+logo.Size = UDim2.fromOffset(34, 34)
+logo.AnchorPoint = Vector2.new(0, 0.5)
+logo.Position = UDim2.fromScale(0, 0.5)
+logo.BackgroundColor3 = C.brand
+logo.Parent = header
+corner(logo, 9)
+do
+	local g = Instance.new("UIGradient")
+	g.Rotation = 90
+	g.Color = ColorSequence.new(Color3.fromRGB(138, 121, 255), Color3.fromRGB(91, 73, 230))
+	g.Parent = logo
+	local face = Instance.new("Frame") -- 旋转的方块，暗示立方体的一个面
+	face.Size = UDim2.fromOffset(14, 14)
+	face.AnchorPoint = Vector2.new(0.5, 0.5)
+	face.Position = UDim2.fromScale(0.5, 0.5)
+	face.Rotation = 45
+	face.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+	face.BackgroundTransparency = 0.12
+	face.Parent = logo
+	corner(face, 3)
+	local spark = Instance.new("Frame") -- 珊瑚色火花点
+	spark.Size = UDim2.fromOffset(9, 9)
+	spark.AnchorPoint = Vector2.new(0.5, 0.5)
+	spark.Position = UDim2.fromScale(1, 0)
+	spark.BackgroundColor3 = C.coral
+	spark.Parent = logo
+	corner(spark, 5)
 end
 
-label("1. Paste the token from the desktop app:", 1)
+local titleLabel = Instance.new("TextLabel")
+titleLabel.BackgroundTransparency = 1
+titleLabel.Position = UDim2.new(0, 46, 0, 2)
+titleLabel.Size = UDim2.new(1, -66, 0, 18)
+titleLabel.Font = Enum.Font.GothamBold
+titleLabel.TextSize = 15
+titleLabel.TextXAlignment = Enum.TextXAlignment.Left
+titleLabel.TextColor3 = C.text
+titleLabel.Text = "Claude Bridge"
+titleLabel.Parent = header
+
+local subtitleLabel = Instance.new("TextLabel")
+subtitleLabel.BackgroundTransparency = 1
+subtitleLabel.Position = UDim2.new(0, 46, 0, 20)
+subtitleLabel.Size = UDim2.new(1, -66, 0, 14)
+subtitleLabel.Font = Enum.Font.Gotham
+subtitleLabel.TextSize = 11
+subtitleLabel.TextXAlignment = Enum.TextXAlignment.Left
+subtitleLabel.TextColor3 = C.muted
+subtitleLabel.Text = "Roblox Studio ↔ Claude"
+subtitleLabel.Parent = header
+
+local statusDot = Instance.new("Frame")
+statusDot.Size = UDim2.fromOffset(10, 10)
+statusDot.AnchorPoint = Vector2.new(1, 0.5)
+statusDot.Position = UDim2.new(1, 0, 0.5, 0)
+statusDot.BackgroundColor3 = C.faint
+statusDot.Parent = header
+corner(statusDot, 5)
+
+-- ---- token 输入 ----
+local tokenLabel = Instance.new("TextLabel")
+tokenLabel.Size = UDim2.new(1, 0, 0, 14)
+tokenLabel.BackgroundTransparency = 1
+tokenLabel.Font = Enum.Font.GothamMedium
+tokenLabel.TextSize = 11
+tokenLabel.TextXAlignment = Enum.TextXAlignment.Left
+tokenLabel.TextColor3 = C.muted
+tokenLabel.Text = "CONNECTION TOKEN"
+tokenLabel.LayoutOrder = 2
+tokenLabel.Parent = root
 
 local tokenBox = Instance.new("TextBox")
-tokenBox.Size = UDim2.new(1, 0, 0, 28)
-tokenBox.LayoutOrder = 2
-tokenBox.PlaceholderText = "token…"
+tokenBox.Size = UDim2.new(1, 0, 0, 34)
+tokenBox.LayoutOrder = 3
+tokenBox.PlaceholderText = "Paste the token from the desktop app…"
+tokenBox.PlaceholderColor3 = C.faint
 tokenBox.Text = getToken()
 tokenBox.ClearTextOnFocus = false
 tokenBox.Font = Enum.Font.Code
 tokenBox.TextSize = 12
-tokenBox.TextColor3 = Color3.fromRGB(230, 230, 230)
-tokenBox.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+tokenBox.TextColor3 = C.text
+tokenBox.BackgroundColor3 = C.surface
 tokenBox.TextXAlignment = Enum.TextXAlignment.Left
+tokenBox.TextTruncate = Enum.TextTruncate.AtEnd
 tokenBox.Parent = root
+corner(tokenBox, 8)
+stroke(tokenBox, C.line, 1, 0)
+padAll(tokenBox, 10, 0, 10, 0)
 
+-- ---- connect 按钮 ----
 local connectBtn = Instance.new("TextButton")
-connectBtn.Size = UDim2.new(1, 0, 0, 32)
-connectBtn.LayoutOrder = 3
-connectBtn.Font = Enum.Font.GothamMedium
+connectBtn.Size = UDim2.new(1, 0, 0, 38)
+connectBtn.LayoutOrder = 4
+connectBtn.AutoButtonColor = false
+connectBtn.Font = Enum.Font.GothamBold
 connectBtn.TextSize = 14
 connectBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-connectBtn.BackgroundColor3 = Color3.fromRGB(88, 101, 242)
+connectBtn.BackgroundColor3 = C.brand
 connectBtn.Text = "Connect"
 connectBtn.Parent = root
+corner(connectBtn, 10)
+connectBtn.MouseEnter:Connect(function()
+	connectBtn.BackgroundColor3 = C.brandHover
+end)
+connectBtn.MouseLeave:Connect(function()
+	connectBtn.BackgroundColor3 = C.brand
+end)
 
-local statusLabel = label("Disconnected.", 4, Color3.fromRGB(170, 170, 170))
-statusLabel.Size = UDim2.new(1, 0, 0, 40)
+-- ---- 状态文字 ----
+local statusLabel = Instance.new("TextLabel")
+statusLabel.Size = UDim2.new(1, 0, 0, 60)
+statusLabel.LayoutOrder = 5
+statusLabel.BackgroundTransparency = 1
+statusLabel.Font = Enum.Font.Gotham
+statusLabel.TextSize = 12
+statusLabel.TextWrapped = true
+statusLabel.TextYAlignment = Enum.TextYAlignment.Top
+statusLabel.TextXAlignment = Enum.TextXAlignment.Left
+statusLabel.TextColor3 = C.muted
+statusLabel.Text = "Disconnected."
+statusLabel.Parent = root
 
+-- 根据状态文字推断状态点/文字颜色。
 local function setStatus(text: string)
 	statusLabel.Text = text
+	local low = string.lower(text)
+	local dotColor, textColor = C.faint, C.muted
+	if string.find(low, "connected", 1, true) and not string.find(low, "not ", 1, true) and not string.find(low, "dis", 1, true) then
+		dotColor, textColor = C.good, C.good
+	elseif
+		string.find(low, "fail", 1, true)
+		or string.find(low, "error", 1, true)
+		or string.find(low, "reject", 1, true)
+		or string.find(low, "unavailable", 1, true)
+	then
+		dotColor, textColor = C.bad, C.bad
+	elseif string.find(low, "connecting", 1, true) or string.find(low, "reconnect", 1, true) then
+		dotColor, textColor = C.idle, C.idle
+	end
+	statusDot.BackgroundColor3 = dotColor
+	statusLabel.TextColor3 = textColor
 end
+
 local function refreshButton()
 	connectBtn.Text = if running then "Disconnect" else "Connect"
 end
