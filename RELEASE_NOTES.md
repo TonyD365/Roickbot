@@ -1,4 +1,4 @@
-## Claude for Roblox Studio v0.1.0 — Phase 1: the core bridge
+## Brickbot v0.1.0 — Phase 1: the core bridge
 
 The first release. This is a working, secured bridge that lets **Claude / Claude Code** control a
 Roblox Studio session in natural language — read and edit scripts, inspect and modify the scene,
@@ -27,14 +27,14 @@ run the simulation, and run arbitrary Luau.
 | --- | --- |
 | `Claude.for.Roblox.Studio-*-arm64.dmg` / `-x64.dmg` | macOS desktop app (Apple Silicon / Intel) |
 | `Claude.for.Roblox.Studio-*-x64.exe` / `-arm64.exe` | Windows desktop app |
-| `ClaudeBridge.rbxmx` | The Roblox Studio plugin (drop into your Studio Plugins folder) |
+| `Brickbot.rbxmx` | The Roblox Studio plugin (drop into your Studio Plugins folder) |
 | `SHA256SUMS` | Checksums for the files above |
 
 ### Getting started
 
 1. Install the desktop app, click **Start service**, then **Install MCP config**, and restart
    Claude Code.
-2. Install `ClaudeBridge.rbxmx` into Studio, enable HTTP
+2. Install `Brickbot.rbxmx` into Studio, enable HTTP
    (`game:GetService("HttpService").HttpEnabled = true`), paste the token into the plugin, and click
    **Connect**.
 3. Ask Claude to call the `health` tool — it should report `pluginConnected: true`.
@@ -54,5 +54,5 @@ Full guide: [docs/INSTALL.md](docs/INSTALL.md) · Tools: [docs/TOOLS.md](docs/TO
 首个版本，第一阶段核心：让 Claude / Claude Code 用自然语言操控 Roblox Studio —— 读写脚本、查看与修改
 场景、运行仿真、执行任意 Luau。安全方面只绑回环、随机 token、`Host`/`Origin` 校验、必需自定义头，防御
 恶意网页；破坏性操作先 dry-run 预览 + 确认，所有更改可撤销。下载桌面应用（Win/macOS，arm64+x64）和插件
-`ClaudeBridge.rbxmx`，按 [docs/INSTALL.md](docs/INSTALL.md) 配置即可。安装包暂未签名，首次打开需绕过
+`Brickbot.rbxmx`，按 [docs/INSTALL.md](docs/INSTALL.md) 配置即可。安装包暂未签名，首次打开需绕过
 Gatekeeper / SmartScreen。

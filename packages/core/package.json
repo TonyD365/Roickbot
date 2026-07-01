@@ -1,7 +1,7 @@
 {
-  "name": "@claude-roblox/core",
+  "name": "@brickbot/core",
   "version": "0.1.0",
-  "description": "Core MCP server + Studio bridge + security for Claude-for-Roblox-Studio.",
+  "description": "Core MCP server + Studio bridge + security for Brickbot.",
   "license": "MIT",
   "type": "module",
   "main": "dist/index.js",
@@ -17,7 +17,7 @@
     "start": "node dist/cli.js"
   },
   "bin": {
-    "claude-roblox-server": "dist/cli.js"
+    "brickbot-server": "dist/cli.js"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.12.0",

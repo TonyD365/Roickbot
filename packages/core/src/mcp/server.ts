@@ -9,7 +9,7 @@ import { registerHarnessTools } from "./registerHarness.js";
 import { registerRuntimeTools } from "./registerRuntimeTools.js";
 import type { ToolContext } from "../tools/types.js";
 
-export const SERVER_NAME = "claude-for-roblox-studio";
+export const SERVER_NAME = "brickbot";
 export const SERVER_VERSION = "0.2.0";
 
 /** 创建并返回一个新的 McpServer（Phase 1 + Phase 2 工具已注册）。 */

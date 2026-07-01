@@ -1,12 +1,12 @@
 {
-  "name": "@claude-roblox/desktop",
+  "name": "@brickbot/desktop",
   "version": "0.1.0",
-  "description": "Desktop app (Electron) for Claude-for-Roblox-Studio.",
+  "description": "Desktop app (Electron) for Brickbot.",
   "license": "MIT",
   "author": "TonyD365",
   "repository": {
     "type": "git",
-    "url": "https://github.com/TonyD365/Claude-for-Roblox-Studio.git"
+    "url": "https://github.com/TonyD365/Brickbot.git"
   },
   "main": "dist/main/index.js",
   "scripts": {
@@ -17,7 +17,7 @@
     "dist": "npm run build && electron-builder --config electron-builder.yml --publish never"
   },
   "dependencies": {
-    "@claude-roblox/core": "0.1.0",
+    "@brickbot/core": "0.1.0",
     "electron-updater": "^6.3.9"
   },
   "devDependencies": {

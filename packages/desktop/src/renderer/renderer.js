@@ -205,7 +205,7 @@
 
   // 显示版本号，便于区分新旧实例。
   api.getVersion().then((v) => {
-    el("sub").textContent = `Bridge between Claude Code and Roblox Studio · v${v}`;
+    el("sub").textContent = `Bridge between AI and Roblox Studio · v${v}`;
   }).catch(() => {});
 
   api.onStatus((status) => render(status));

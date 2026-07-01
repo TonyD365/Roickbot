@@ -1,11 +1,11 @@
-# Claude for Roblox Studio
+# Brickbot
 
-[![CI](https://github.com/TonyD365/Claude-for-Roblox-Studio/actions/workflows/ci.yml/badge.svg)](https://github.com/TonyD365/Claude-for-Roblox-Studio/actions/workflows/ci.yml)
-[![Latest release](https://img.shields.io/github/v/release/TonyD365/Claude-for-Roblox-Studio?sort=semver)](https://github.com/TonyD365/Claude-for-Roblox-Studio/releases/latest)
-[![Downloads total](https://img.shields.io/github/downloads/TonyD365/Claude-for-Roblox-Studio/total?label=downloads)](https://github.com/TonyD365/Claude-for-Roblox-Studio/releases)
-[![Downloads latest](https://img.shields.io/github/downloads/TonyD365/Claude-for-Roblox-Studio/latest/total?label=downloads%40latest)](https://github.com/TonyD365/Claude-for-Roblox-Studio/releases/latest)
-[![Stars](https://img.shields.io/github/stars/TonyD365/Claude-for-Roblox-Studio?style=flat)](https://github.com/TonyD365/Claude-for-Roblox-Studio/stargazers)
-[![Last commit](https://img.shields.io/github/last-commit/TonyD365/Claude-for-Roblox-Studio)](https://github.com/TonyD365/Claude-for-Roblox-Studio/commits)
+[![CI](https://github.com/TonyD365/Brickbot/actions/workflows/ci.yml/badge.svg)](https://github.com/TonyD365/Brickbot/actions/workflows/ci.yml)
+[![Latest release](https://img.shields.io/github/v/release/TonyD365/Brickbot?sort=semver)](https://github.com/TonyD365/Brickbot/releases/latest)
+[![Downloads total](https://img.shields.io/github/downloads/TonyD365/Brickbot/total?label=downloads)](https://github.com/TonyD365/Brickbot/releases)
+[![Downloads latest](https://img.shields.io/github/downloads/TonyD365/Brickbot/latest/total?label=downloads%40latest)](https://github.com/TonyD365/Brickbot/releases/latest)
+[![Stars](https://img.shields.io/github/stars/TonyD365/Brickbot?style=flat)](https://github.com/TonyD365/Brickbot/stargazers)
+[![Last commit](https://img.shields.io/github/last-commit/TonyD365/Brickbot)](https://github.com/TonyD365/Brickbot/commits)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 A desktop app + MCP server that lets **Claude Code — and any other MCP client (Gemini, Cursor,
@@ -18,7 +18,7 @@ all through natural language from your editor.
 > working, secured bridge with tools for scripts, instances, properties, selection, run/test,
 > and building scenes (parts, terrain, lighting, decals, models, GUI), plus a universal
 > `run_luau` escape hatch. Phase 3 (Bot vision) is next. Cross-platform installers with
-> auto-update are published on the [Releases](https://github.com/TonyD365/Claude-for-Roblox-Studio/releases) page.
+> auto-update are published on the [Releases](https://github.com/TonyD365/Brickbot/releases) page.
 
 *(中文版见下方 / Chinese version below.)*
 
@@ -97,16 +97,16 @@ See [docs/PROTOCOL.md](docs/PROTOCOL.md) for the full wire protocol.
 ## Installation (end user)
 
 1. **Install the desktop app** from the
-   [Releases](https://github.com/TonyD365/Claude-for-Roblox-Studio/releases) page — a macOS `.dmg`
+   [Releases](https://github.com/TonyD365/Brickbot/releases) page — a macOS `.dmg`
    (Universal: Intel + Apple Silicon) or a Windows `.exe` (x64, runs on Intel and ARM).
 2. **Start the service** in the app, pick your client from the dropdown (Claude Code, Cursor,
-   Gemini CLI, Cline, VS Code) and click **Install MCP config** — the app writes the `roblox-studio`
+   Gemini CLI, Cline, VS Code) and click **Install MCP config** — the app writes the `brickbot`
    server in that client's exact format and location for you. Then restart the client.
 3. **Install the plugin**: if it shows offline, click **Install plugin** and save
-   `ClaudeBridge.rbxmx` into your Studio Plugins folder.
+   `Brickbot.rbxmx` into your Studio Plugins folder.
 4. **Enable HTTP** in Studio's Command Bar (once per place):
    `game:GetService("HttpService").HttpEnabled = true`
-5. **Pair**: copy the token from the app, paste it into the Claude Bridge plugin panel in Studio,
+5. **Pair**: copy the token from the app, paste it into the Brickbot plugin panel in Studio,
    and click **Connect**.
 6. **Verify**: ask Claude to call the `health` tool — it should report `pluginConnected: true`.
 
@@ -125,7 +125,7 @@ To run the desktop app from source you also need the Electron binary (run `npm i
 `ELECTRON_SKIP_BINARY_DOWNLOAD`) and a built plugin:
 
 ```bash
-npm run build:plugin     # requires Rojo (see plugin/aftman.toml) -> dist/ClaudeBridge.rbxmx
+npm run build:plugin     # requires Rojo (see plugin/aftman.toml) -> dist/Brickbot.rbxmx
 npm run build:desktop
 npm start --workspace packages/desktop
 ```
@@ -184,7 +184,7 @@ client automatically (each one differs slightly, e.g. Cline needs `streamableHtt
 ```json
 {
   "mcpServers": {
-    "roblox-studio": {
+    "brickbot": {
       "httpUrl": "http://127.0.0.1:7331/mcp",
       "headers": { "Authorization": "Bearer PASTE_TOKEN", "X-Roblox-MCP": "1" }
     }
@@ -236,14 +236,14 @@ MIT
 
 <br>
 
-# Claude for Roblox Studio（中文）
+# Brickbot（中文）
 
-[![CI](https://github.com/TonyD365/Claude-for-Roblox-Studio/actions/workflows/ci.yml/badge.svg)](https://github.com/TonyD365/Claude-for-Roblox-Studio/actions/workflows/ci.yml)
-[![Latest release](https://img.shields.io/github/v/release/TonyD365/Claude-for-Roblox-Studio?sort=semver)](https://github.com/TonyD365/Claude-for-Roblox-Studio/releases/latest)
-[![Downloads total](https://img.shields.io/github/downloads/TonyD365/Claude-for-Roblox-Studio/total?label=downloads)](https://github.com/TonyD365/Claude-for-Roblox-Studio/releases)
-[![Downloads latest](https://img.shields.io/github/downloads/TonyD365/Claude-for-Roblox-Studio/latest/total?label=downloads%40latest)](https://github.com/TonyD365/Claude-for-Roblox-Studio/releases/latest)
-[![Stars](https://img.shields.io/github/stars/TonyD365/Claude-for-Roblox-Studio?style=flat)](https://github.com/TonyD365/Claude-for-Roblox-Studio/stargazers)
-[![Last commit](https://img.shields.io/github/last-commit/TonyD365/Claude-for-Roblox-Studio)](https://github.com/TonyD365/Claude-for-Roblox-Studio/commits)
+[![CI](https://github.com/TonyD365/Brickbot/actions/workflows/ci.yml/badge.svg)](https://github.com/TonyD365/Brickbot/actions/workflows/ci.yml)
+[![Latest release](https://img.shields.io/github/v/release/TonyD365/Brickbot?sort=semver)](https://github.com/TonyD365/Brickbot/releases/latest)
+[![Downloads total](https://img.shields.io/github/downloads/TonyD365/Brickbot/total?label=downloads)](https://github.com/TonyD365/Brickbot/releases)
+[![Downloads latest](https://img.shields.io/github/downloads/TonyD365/Brickbot/latest/total?label=downloads%40latest)](https://github.com/TonyD365/Brickbot/releases/latest)
+[![Stars](https://img.shields.io/github/stars/TonyD365/Brickbot?style=flat)](https://github.com/TonyD365/Brickbot/stargazers)
+[![Last commit](https://img.shields.io/github/last-commit/TonyD365/Brickbot)](https://github.com/TonyD365/Brickbot/commits)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 一个桌面应用 + MCP 服务器，让 **Claude Code —— 以及任何其它 MCP 客户端（Gemini、Cursor、VS Code…）**
@@ -254,7 +254,7 @@ MIT
 > **状态：** v1.0.0 已发布。第一阶段（核心）与第二阶段（做图）均已完成 —— 一条可用且带安全鉴权的桥，
 > 涵盖脚本、实例、属性、选择、运行/测试，以及搭建场景（Part、地形、光照、贴图、模型、GUI），外加万能的
 > `run_luau` 逃生舱。第三阶段（Bot 视觉）进行中。带自动更新的跨平台安装包见
-> [Releases](https://github.com/TonyD365/Claude-for-Roblox-Studio/releases) 页面。
+> [Releases](https://github.com/TonyD365/Brickbot/releases) 页面。
 
 ## 目录
 
@@ -318,15 +318,15 @@ Studio 插件通过 **WebSocket**（Studio 的 `HttpService:CreateWebStreamClien
 
 ## 安装（最终用户）
 
-1. 从 [Releases](https://github.com/TonyD365/Claude-for-Roblox-Studio/releases) 页面**下载桌面应用**
+1. 从 [Releases](https://github.com/TonyD365/Brickbot/releases) 页面**下载桌面应用**
    （Windows `.exe` 或 macOS `.dmg`，arm64 / x64）。
 2. 在应用里**启动服务**，从下拉框选择你的客户端（Claude Code、Cursor、Gemini CLI、Cline、VS Code）
-   再点 **Install MCP config** —— 应用会按该客户端正确的格式与路径自动写入 `roblox-studio` 服务，
+   再点 **Install MCP config** —— 应用会按该客户端正确的格式与路径自动写入 `brickbot` 服务，
    然后重启对应客户端。
-3. **安装插件**：若显示离线，点 **Install plugin**，把 `ClaudeBridge.rbxmx` 保存到 Studio 的 Plugins 目录。
+3. **安装插件**：若显示离线，点 **Install plugin**，把 `Brickbot.rbxmx` 保存到 Studio 的 Plugins 目录。
 4. 在 Studio 命令栏**启用 HTTP**（每个 place 一次）：
    `game:GetService("HttpService").HttpEnabled = true`
-5. **配对**：从应用复制 token，粘贴进 Studio 里的 Claude Bridge 插件面板，点 **Connect**。
+5. **配对**：从应用复制 token，粘贴进 Studio 里的 Brickbot 插件面板，点 **Connect**。
 6. **验证**：让 Claude 调用 `health` 工具 —— 应返回 `pluginConnected: true`。
 
 完整步骤见 [docs/INSTALL.md](docs/INSTALL.md)。
@@ -344,7 +344,7 @@ node smoke.mjs           # 端到端桥烟雾测试（无需 Studio）
 `ELECTRON_SKIP_BINARY_DOWNLOAD`）以及构建好的插件：
 
 ```bash
-npm run build:plugin     # 需要 Rojo（见 plugin/aftman.toml） -> dist/ClaudeBridge.rbxmx
+npm run build:plugin     # 需要 Rojo（见 plugin/aftman.toml） -> dist/Brickbot.rbxmx
 npm run build:desktop
 npm start --workspace packages/desktop
 ```
@@ -396,7 +396,7 @@ npm start --workspace packages/desktop
 ```json
 {
   "mcpServers": {
-    "roblox-studio": {
+    "brickbot": {
       "httpUrl": "http://127.0.0.1:7331/mcp",
       "headers": { "Authorization": "Bearer 粘贴你的token", "X-Roblox-MCP": "1" }
     }

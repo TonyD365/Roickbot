@@ -15,7 +15,7 @@ const buildDir = join(root, "icons"); // electron-builder buildResources dir (no
 const assets = join(root, "src", "assets");
 mkdirSync(assets, { recursive: true });
 
-const CONCEPTS = { a: "icon.svg", b: "icon-b.svg", c: "icon-c.svg" };
+const CONCEPTS = { a: "icon.svg" };
 const choice = (process.env.ICON || "a").toLowerCase();
 const chosenSvg = readFileSync(join(buildDir, CONCEPTS[choice] || CONCEPTS.a));
 const trayTpl = readFileSync(join(assets, "trayTemplate.svg"));
