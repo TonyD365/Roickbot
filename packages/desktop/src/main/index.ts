@@ -27,6 +27,7 @@ interface CoreStatus {
 
 let win: BrowserWindow | null = null;
 let tray: Tray | null = null;
+let trayMenu: Menu | null = null; // 托盘右键弹出的菜单（不 setContextMenu，以免 mac 左键也弹菜单）
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let core: any;
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -255,11 +256,13 @@ function menuTemplate(): MenuItemConstructorOptions[] {
   ];
 }
 
-/** 重建并应用托盘 + macOS Dock 的右键菜单。 */
+/** 重建托盘右键菜单 + macOS 底部 Dock 菜单（随服务状态刷新）。 */
 function updateMenus(): void {
   try {
     const menu = Menu.buildFromTemplate(menuTemplate());
-    if (tray && !tray.isDestroyed()) tray.setContextMenu(menu);
+    // 托盘：不 setContextMenu（否则 mac 左键也会弹菜单），改为右键手动 popUp。
+    trayMenu = menu;
+    // 底部 Dock（原生右键菜单）。
     if (isMac && app.dock) app.dock.setMenu(menu);
   } catch (e) {
     console.error("[main] failed to update menus:", e);
@@ -281,7 +284,11 @@ function createTray(): void {
     } else {
       tray = new Tray(image);
       tray.setToolTip(`Claude for Roblox Studio v${app.getVersion()}`);
+      // 左键：打开/聚焦窗口（若已关则新建）。右键：弹出选项菜单（不打开窗口）。
       tray.on("click", () => showWindow());
+      tray.on("right-click", () => {
+        if (tray && trayMenu) tray.popUpContextMenu(trayMenu);
+      });
     }
   } catch (e) {
     console.error("[main] failed to create tray:", e);
