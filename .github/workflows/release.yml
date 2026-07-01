@@ -28,11 +28,11 @@ jobs:
           chmod +x rojo
           sudo mv rojo /usr/local/bin/rojo
           rojo --version
-      - run: mkdir -p dist && rojo build plugin/default.project.json -o dist/Brickbot.rbxmx
+      - run: mkdir -p dist && rojo build plugin/default.project.json -o dist/Roickbot.rbxmx
       - uses: actions/upload-artifact@v4
         with:
-          name: Brickbot-plugin
-          path: dist/Brickbot.rbxmx
+          name: Roickbot-plugin
+          path: dist/Roickbot.rbxmx
 
   desktop:
     name: Build desktop app (${{ matrix.os }})
@@ -51,7 +51,7 @@ jobs:
       # 插件 .rbxmx 需放到 dist/ 供 electron-builder 的 extraResources 打包。
       - uses: actions/download-artifact@v4
         with:
-          name: Brickbot-plugin
+          name: Roickbot-plugin
           path: dist
       - run: npm ci
       - run: npm run build:core

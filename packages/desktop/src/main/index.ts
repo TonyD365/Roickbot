@@ -9,7 +9,7 @@ import { createWriteStream } from "node:fs";
 // electron-updater 是 CommonJS 具名导出，必须具名导入（它没有 default 导出）。
 import { autoUpdater } from "electron-updater";
 
-const REPO = "TonyD365/Brickbot";
+const REPO = "TonyD365/Roickbot";
 const isMac = process.platform === "darwin";
 
 // core 是 ESM-only 包，从 CommonJS 主进程通过动态 import 加载，故这里用宽松类型。
@@ -41,8 +41,8 @@ let core: any;
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let service: any;
 
-/** 调试开关：打包后默认关闭 DevTools；设 BRICKBOT_DEBUG=1 可强制打开。 */
-const DEBUG = process.env.BRICKBOT_DEBUG === "1" || !app.isPackaged;
+/** 调试开关：打包后默认关闭 DevTools；设 ROICKBOT_DEBUG=1 可强制打开。 */
+const DEBUG = process.env.ROICKBOT_DEBUG === "1" || !app.isPackaged;
 
 // 兜底：electron-updater 内部下载失败等会抛出未捕获的 Promise 拒绝，记录而非让它变成警告噪音。
 process.on("unhandledRejection", (reason) => {
@@ -51,8 +51,8 @@ process.on("unhandledRejection", (reason) => {
 
 /** 预编译插件 .rbxmx 的位置（打包后在 resources/，开发时在仓库 dist/）。 */
 function pluginArtifactPath(): string {
-  if (app.isPackaged) return join(process.resourcesPath, "Brickbot.rbxmx");
-  return join(app.getAppPath(), "..", "..", "dist", "Brickbot.rbxmx");
+  if (app.isPackaged) return join(process.resourcesPath, "Roickbot.rbxmx");
+  return join(app.getAppPath(), "..", "..", "dist", "Roickbot.rbxmx");
 }
 
 function createWindow(): void {
@@ -63,7 +63,7 @@ function createWindow(): void {
     width: 540,
     height: 700,
     // 版本号放进标题栏：即使渲染层出问题，也能一眼看出是不是新版本实例。
-    title: `Brickbot v${app.getVersion()}`,
+    title: `Roickbot v${app.getVersion()}`,
     webPreferences: {
       preload: preloadPath,
       contextIsolation: true,
@@ -96,15 +96,15 @@ function createWindow(): void {
     win = null;
   });
 
-  // 开发用：BRICKBOT_SCREENSHOT=<path> 时，加载后截图保存（供 UI 迭代验证）。
-  if (process.env.BRICKBOT_SCREENSHOT) {
+  // 开发用：ROICKBOT_SCREENSHOT=<path> 时，加载后截图保存（供 UI 迭代验证）。
+  if (process.env.ROICKBOT_SCREENSHOT) {
     win.webContents.on("did-finish-load", () => {
       setTimeout(() => {
         void win!.webContents
           .capturePage()
           .then(async (img) => {
             const { writeFileSync } = await import("node:fs");
-            writeFileSync(process.env.BRICKBOT_SCREENSHOT!, img.toPNG());
+            writeFileSync(process.env.ROICKBOT_SCREENSHOT!, img.toPNG());
             console.log("[main] screenshot saved");
           })
           .catch((e) => console.error("[main] screenshot failed:", e));
@@ -186,8 +186,8 @@ async function rotateToken(): Promise<string> {
 /** 弹保存框把内置插件写到用户选择的位置。 */
 async function installPlugin(): Promise<{ saved: boolean; path?: string }> {
   const result = await showSave({
-    title: "Save Brickbot plugin",
-    defaultPath: "Brickbot.rbxmx",
+    title: "Save Roickbot plugin",
+    defaultPath: "Roickbot.rbxmx",
     filters: [{ name: "Roblox plugin", extensions: ["rbxmx"] }],
   });
   if (result.canceled || !result.filePath) return { saved: false };
@@ -234,7 +234,7 @@ function menuAction(fn: () => unknown | Promise<unknown>): () => void {
   return () => {
     Promise.resolve()
       .then(fn)
-      .catch((e) => dialog.showErrorBox("Brickbot", String((e as Error)?.message ?? e)));
+      .catch((e) => dialog.showErrorBox("Roickbot", String((e as Error)?.message ?? e)));
   };
 }
 
@@ -243,7 +243,7 @@ function menuTemplate(): MenuItemConstructorOptions[] {
   const running = service?.isRunning() ?? false;
   const hasToken = !!(service && service.getToken());
   return [
-    { label: "Open Brickbot", click: () => showWindow() },
+    { label: "Open Roickbot", click: () => showWindow() },
     { type: "separator" },
     {
       label: running ? "Stop service" : "Start service",
@@ -291,7 +291,7 @@ function createTray(): void {
       console.warn("[main] tray image missing; skipping tray");
     } else {
       tray = new Tray(image);
-      tray.setToolTip(`Brickbot v${app.getVersion()}`);
+      tray.setToolTip(`Roickbot v${app.getVersion()}`);
       // 左键：打开/聚焦窗口（若已关则新建）。右键：弹出选项菜单（不打开窗口）。
       tray.on("click", () => showWindow());
       tray.on("right-click", () => {
@@ -325,7 +325,7 @@ function registerIpc(): void {
 
   // macOS 半自动更新：把 dmg 下载到桌面并打开，用户自行拖进 Applications。
   ipcMain.handle("download-update", async (_e, url: string) => {
-    const name = url.split("/").pop() || "Brickbot.dmg";
+    const name = url.split("/").pop() || "Roickbot.dmg";
     const dest = join(app.getPath("desktop"), name);
     await downloadFile(url, dest);
     await shell.openPath(dest);
@@ -364,7 +364,7 @@ function downloadFile(url: string, dest: string): Promise<void> {
 function fetchChangelog(version: string): Promise<string> {
   return new Promise((resolve) => {
     const request = net.request(`https://api.github.com/repos/${REPO}/releases/tags/v${version}`);
-    request.setHeader("User-Agent", "Brickbot");
+    request.setHeader("User-Agent", "Roickbot");
     request.setHeader("Accept", "application/vnd.github+json");
     let body = "";
     request.on("response", (response) => {
@@ -415,7 +415,7 @@ function startAutoUpdate(): void {
       console.log("[updater] update available:", info.version);
       if (isMac) {
         // mac 未签名：按需下载 Universal dmg，先弹更新日志（附下载按钮）。
-        const file = `Brickbot-${info.version}-universal.dmg`;
+        const file = `Roickbot-${info.version}-universal.dmg`;
         const url = `https://github.com/${REPO}/releases/download/v${info.version}/${file}`;
         void announceUpdate(info.version, "mac", url);
       }
@@ -444,8 +444,8 @@ if (!app.requestSingleInstanceLock()) {
     createWindow();
     createTray();
 
-    // 开发用：BRICKBOT_FAKE_UPDATE=1 时注入一个假的待安装更新，便于预览更新弹窗。
-    if (process.env.BRICKBOT_FAKE_UPDATE) {
+    // 开发用：ROICKBOT_FAKE_UPDATE=1 时注入一个假的待安装更新，便于预览更新弹窗。
+    if (process.env.ROICKBOT_FAKE_UPDATE) {
       pendingUpdate = {
         version: "9.9.9",
         kind: isMac ? "mac" : "win",
@@ -459,12 +459,12 @@ if (!app.requestSingleInstanceLock()) {
           "### Fixes\n\n" +
           "- No more false disconnects during long commands\n" +
           "- Reliable handshake with retries\n\n" +
-          "See the [full release notes](https://github.com/TonyD365/Brickbot/releases) for details.",
+          "See the [full release notes](https://github.com/TonyD365/Roickbot/releases) for details.",
       };
     }
 
     try {
-      core = await import("@brickbot/core");
+      core = await import("@roickbot/core");
       service = new core.CoreService({ tokenPath: join(app.getPath("userData"), "token") });
       service.on("status", (s: CoreStatus) => {
         sendToRenderer("status", s);

@@ -1,5 +1,5 @@
 {
-  "name": "brickbot",
+  "name": "roickbot",
   "version": "0.1.0",
   "private": true,
   "description": "Desktop app + MCP server that lets Claude / Claude Code control Roblox Studio.",
@@ -14,7 +14,7 @@
     "build:desktop": "npm run build --workspace packages/desktop",
     "typecheck": "npm run typecheck --workspace packages/core && npm run typecheck --workspace packages/desktop",
     "test": "npm run test --workspace packages/core",
-    "build:plugin": "rojo build plugin/default.project.json -o dist/Brickbot.rbxmx",
+    "build:plugin": "rojo build plugin/default.project.json -o dist/Roickbot.rbxmx",
     "dev:core": "npm run dev --workspace packages/core"
   },
   "engines": {
