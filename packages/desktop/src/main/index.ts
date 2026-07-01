@@ -79,6 +79,22 @@ function createWindow(): void {
 
   void win.loadFile(join(__dirname, "..", "renderer", "index.html"));
   if (DEBUG) win.webContents.openDevTools({ mode: "detach" });
+
+  // 开发用：CLAUDE_RBX_SCREENSHOT=<path> 时，加载后截图保存（供 UI 迭代验证）。
+  if (process.env.CLAUDE_RBX_SCREENSHOT) {
+    win.webContents.on("did-finish-load", () => {
+      setTimeout(() => {
+        void win!.webContents
+          .capturePage()
+          .then(async (img) => {
+            const { writeFileSync } = await import("node:fs");
+            writeFileSync(process.env.CLAUDE_RBX_SCREENSHOT!, img.toPNG());
+            console.log("[main] screenshot saved");
+          })
+          .catch((e) => console.error("[main] screenshot failed:", e));
+      }, 700);
+    });
+  }
 }
 
 /** 显示（或新建）主窗口并聚焦。 */
