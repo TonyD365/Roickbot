@@ -27,6 +27,14 @@ interface CoreStatus {
 
 let win: BrowserWindow | null = null;
 let tray: Tray | null = null;
+
+interface PendingUpdate {
+  version: string;
+  notes: string; // GitHub release body (markdown)
+  kind: "win" | "mac";
+  url?: string; // mac: the .dmg url to download
+}
+let pendingUpdate: PendingUpdate | null = null;
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let core: any;
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -295,6 +303,7 @@ function registerIpc(): void {
 
   ipcMain.handle("open-external", (_e, url: string) => shell.openExternal(url));
   ipcMain.handle("restart-to-update", () => autoUpdater.quitAndInstall());
+  ipcMain.handle("get-pending-update", (): PendingUpdate | null => pendingUpdate);
 
   // macOS 半自动更新：把 dmg 下载到桌面并打开，用户自行拖进 Applications。
   ipcMain.handle("download-update", async (_e, url: string) => {
@@ -333,6 +342,40 @@ function downloadFile(url: string, dest: string): Promise<void> {
   });
 }
 
+/** 从 GitHub 抓某个版本的 Release 说明（changelog / body）。失败返回空串。 */
+function fetchChangelog(version: string): Promise<string> {
+  return new Promise((resolve) => {
+    const request = net.request(`https://api.github.com/repos/${REPO}/releases/tags/v${version}`);
+    request.setHeader("User-Agent", "Claude-for-Roblox-Studio");
+    request.setHeader("Accept", "application/vnd.github+json");
+    let body = "";
+    request.on("response", (response) => {
+      if ((response.statusCode ?? 0) >= 400) {
+        response.on("data", () => {});
+        response.on("end", () => resolve(""));
+        return;
+      }
+      response.on("data", (c) => (body += c.toString()));
+      response.on("end", () => {
+        try {
+          resolve((JSON.parse(body) as { body?: string }).body ?? "");
+        } catch {
+          resolve("");
+        }
+      });
+    });
+    request.on("error", () => resolve(""));
+    request.end();
+  });
+}
+
+/** 记录待安装更新并通知渲染进程弹出更新日志界面。 */
+async function announceUpdate(version: string, kind: "win" | "mac", url?: string): Promise<void> {
+  const notes = await fetchChangelog(version);
+  pendingUpdate = { version, notes, kind, url };
+  win?.webContents.send("update-available", pendingUpdate);
+}
+
 /** 后台检查更新（每次启动时）。mac 未签名时无法自动安装，仅记录日志。 */
 function startAutoUpdate(): void {
   if (!app.isPackaged) {
@@ -353,15 +396,17 @@ function startAutoUpdate(): void {
     autoUpdater.on("update-available", (info) => {
       console.log("[updater] update available:", info.version);
       if (isMac) {
+        // mac 未签名：按需下载 dmg，先弹更新日志（附下载按钮）。
         const arch = process.arch === "arm64" ? "arm64" : "x64";
         const file = `Claude-for-Roblox-Studio-${info.version}-${arch}.dmg`;
         const url = `https://github.com/${REPO}/releases/download/v${info.version}/${file}`;
-        win?.webContents.send("update-manual", { version: info.version, url });
+        void announceUpdate(info.version, "mac", url);
       }
     });
     autoUpdater.on("update-downloaded", (info) => {
+      // Windows：electron-updater 已在后台下好，弹更新日志（附重启安装按钮）。
       console.log("[updater] downloaded:", info.version);
-      win?.webContents.send("update-ready", info.version);
+      void announceUpdate(info.version, "win");
     });
     // .catch 避免未处理的 Promise 拒绝（例如无网络/404）。
     autoUpdater.checkForUpdates().catch((e) => console.error("[updater] check failed:", e?.message ?? e));
@@ -381,6 +426,25 @@ if (!app.requestSingleInstanceLock()) {
     registerIpc();
     createWindow();
     createTray();
+
+    // 开发用：CLAUDE_RBX_FAKE_UPDATE=1 时注入一个假的待安装更新，便于预览更新弹窗。
+    if (process.env.CLAUDE_RBX_FAKE_UPDATE) {
+      pendingUpdate = {
+        version: "9.9.9",
+        kind: isMac ? "mac" : "win",
+        url: "https://example.invalid/app.dmg",
+        notes:
+          "## What's new\n\n" +
+          "- **WebSocket** transport for the Studio bridge (no more polling)\n" +
+          "- New app icon + a menu-bar / Dock menu with all actions\n" +
+          "- Redesigned desktop and Studio-plugin UI\n" +
+          "- `fire_signal` can now pass instances via `{\"$path\":\"…\"}`\n\n" +
+          "### Fixes\n\n" +
+          "- No more false disconnects during long commands\n" +
+          "- Reliable handshake with retries\n\n" +
+          "See the [full release notes](https://github.com/TonyD365/Claude-for-Roblox-Studio/releases) for details.",
+      };
+    }
 
     try {
       core = await import("@claude-roblox/core");

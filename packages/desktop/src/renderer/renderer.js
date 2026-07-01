@@ -131,14 +131,65 @@
     await refresh();
   }));
 
-  el("restartUpdate").addEventListener("click", guard(() => api.restartToUpdate()));
+  // ---- 更新：横幅按钮 + 更新日志弹窗（changelog 从 GitHub 抓取） ----
+  let pendingUpdate = null;
 
-  // macOS（未签名）：下载 dmg 到桌面并打开，用户手动拖入 Applications。
-  let manualUrl = null;
-  el("downloadUpdate").addEventListener("click", guard(async () => {
-    if (!manualUrl) return;
+  // 极简 Markdown → HTML：先转义，再套用标题 / 列表 / 粗体 / 行内代码 / 链接。
+  function renderMarkdown(md) {
+    if (!md || !md.trim()) return '<p class="small">No release notes.</p>';
+    let s = md.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    s = s.replace(/`([^`]+)`/g, "<code>$1</code>");
+    s = s.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
+    s = s.replace(/\[([^\]]+)\]\((https?:[^)]+)\)/g, '<a href="$2" data-ext="1">$1</a>');
+    const out = [];
+    let inList = false;
+    const closeList = () => { if (inList) { out.push("</ul>"); inList = false; } };
+    for (const line of s.split(/\r?\n/)) {
+      const h = line.match(/^(#{1,3})\s+(.*)$/);
+      const li = line.match(/^\s*[-*]\s+(.*)$/);
+      if (h) { closeList(); out.push(`<h${h[1].length}>${h[2]}</h${h[1].length}>`); }
+      else if (li) { if (!inList) { out.push("<ul>"); inList = true; } out.push(`<li>${li[1]}</li>`); }
+      else if (line.trim() === "") { closeList(); }
+      else { closeList(); out.push(`<p>${line}</p>`); }
+    }
+    closeList();
+    return out.join("");
+  }
+
+  function showUpdateModal() {
+    const u = pendingUpdate;
+    if (!u) return;
+    el("updateModalTitle").textContent = `Update available · v${u.version}`;
+    el("updateModalSub").textContent = u.kind === "win"
+      ? "Downloaded and ready to install."
+      : "Download the new version, then drag it into Applications.";
+    el("changelogBody").innerHTML = renderMarkdown(u.notes);
+    el("changelogBody").querySelectorAll("a[data-ext]").forEach((a) => {
+      a.addEventListener("click", (e) => { e.preventDefault(); api.openExternal(a.getAttribute("href")); });
+    });
+    el("installUpdateBtn").textContent = u.kind === "win" ? "Restart & install" : "Download & install";
+    el("updateModal").classList.remove("hidden");
+  }
+  const hideUpdateModal = () => el("updateModal").classList.add("hidden");
+
+  // 检测到更新（或界面打开时已有待装更新）：显示横幅 + 直接弹出更新日志界面。
+  function onUpdate(u) {
+    if (!u || !u.version) return;
+    pendingUpdate = u;
+    el("updateText").textContent = `Update v${u.version} is available.`;
+    el("updateBanner").classList.remove("hidden");
+    showUpdateModal();
+  }
+
+  el("viewUpdate").addEventListener("click", () => showUpdateModal());
+  el("updateLater").addEventListener("click", hideUpdateModal);
+  el("installUpdateBtn").addEventListener("click", guard(async () => {
+    const u = pendingUpdate;
+    if (!u) return;
+    if (u.kind === "win") { await api.restartToUpdate(); return; }
     flash("Downloading update… this can take a minute.");
-    const r = await api.downloadUpdate(manualUrl);
+    const r = await api.downloadUpdate(u.url);
+    hideUpdateModal();
     flash(`Saved to ${r.path} and opened it. Drag the app into Applications, then reopen.`);
   }));
 
@@ -149,18 +200,9 @@
 
   api.onStatus((status) => render(status));
   api.onHandshake(() => { flash("Studio plugin connected."); refresh(); });
-  // 两个更新横幅互斥：任何时候最多显示一个。
-  api.onUpdateReady((version) => {
-    el("manualUpdateBanner").classList.add("hidden");
-    el("updateText").textContent = `Update ${version} downloaded.`;
-    el("updateBanner").classList.remove("hidden");
-  });
-  api.onUpdateManual(({ version, url }) => {
-    manualUrl = url;
-    el("updateBanner").classList.add("hidden");
-    el("manualUpdateText").textContent = `Update ${version} available — download & drag into Applications.`;
-    el("manualUpdateBanner").classList.remove("hidden");
-  });
+  api.onUpdateAvailable(onUpdate);
+  // 界面一打开就检查是否已有待安装更新，有则弹出更新日志。
+  api.getPendingUpdate().then(onUpdate).catch(() => {});
 
   setInterval(refresh, 2500);
   setInterval(refreshActivity, 2000);
