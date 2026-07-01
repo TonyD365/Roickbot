@@ -29,6 +29,20 @@ await png(trayTpl, 16).toFile(join(assets, "trayTemplate.png"));
 await png(trayTpl, 32).toFile(join(assets, "trayTemplate@2x.png"));
 console.log(`Generated production icons from concept "${choice}".`);
 
+// 预生成 icon.icns / icon.ico 并提交 —— electron-builder 自带的 PNG→icns/ico 转换器
+// 会 panic（app-builder index out of range），提供成品即可绕过它。
+try {
+  const { default: icongen } = await import("icon-gen");
+  await icongen(join(buildDir, "icon.png"), buildDir, {
+    report: false,
+    icns: { name: "icon", sizes: [16, 32, 64, 128, 256, 512, 1024] },
+    ico: { name: "icon", sizes: [16, 24, 32, 48, 64, 128, 256] },
+  });
+  console.log("Generated icon.icns + icon.ico.");
+} catch (e) {
+  console.warn("icon-gen unavailable; skipped icns/ico:", e.message);
+}
+
 // 可选：把三个方案渲染成预览
 if (process.argv.includes("previews")) {
   const outDir = process.env.PREVIEW_DIR || join(root, "icon-previews");
