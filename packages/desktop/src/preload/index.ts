@@ -15,14 +15,14 @@ const api = {
   openExternal: (url: string) => ipcRenderer.invoke("open-external", url),
   restartToUpdate: () => ipcRenderer.invoke("restart-to-update"),
   downloadUpdate: (url: string) => ipcRenderer.invoke("download-update", url),
+  getPendingUpdate: () => ipcRenderer.invoke("get-pending-update"),
   onStatus: (cb: (status: unknown) => void) =>
     ipcRenderer.on("status", (_e, status) => cb(status)),
   onHandshake: (cb: (info: unknown) => void) =>
     ipcRenderer.on("handshake", (_e, info) => cb(info)),
-  onUpdateReady: (cb: (version: string) => void) =>
-    ipcRenderer.on("update-ready", (_e, version) => cb(version)),
-  onUpdateManual: (cb: (info: { version: string; url: string }) => void) =>
-    ipcRenderer.on("update-manual", (_e, info) => cb(info)),
+  onUpdateAvailable: (
+    cb: (u: { version: string; notes: string; kind: "win" | "mac"; url?: string }) => void,
+  ) => ipcRenderer.on("update-available", (_e, u) => cb(u)),
 };
 
 try {

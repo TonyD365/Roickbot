@@ -133,6 +133,32 @@
       .ev .m { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
       .ev .ok { color: var(--good); } .ev .bad { color: var(--bad); } .ev .info { color: var(--blue); }
       #msg { font-size: 11.5px; color: var(--coral); min-height: 16px; margin-top: 2px; }
+
+      /* ---- update modal ---- */
+      .modal {
+        position: fixed; inset: 0; z-index: 50; padding: 22px;
+        display: flex; align-items: center; justify-content: center;
+        background: rgba(8, 7, 14, 0.62); backdrop-filter: blur(3px);
+      }
+      .modal-card {
+        width: 100%; max-width: 470px; max-height: 86vh; display: flex; flex-direction: column;
+        background: linear-gradient(180deg, var(--card-2), var(--card));
+        border: 1px solid var(--border-strong); border-radius: 16px;
+        box-shadow: 0 24px 70px rgba(0, 0, 0, 0.55); overflow: hidden;
+      }
+      .modal-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; padding: 18px 18px 10px; }
+      .modal-title { font-size: 16px; font-weight: 650; letter-spacing: -0.01em; }
+      .modal-sub { color: var(--muted); font-size: 12px; margin-top: 3px; }
+      .changelog { overflow-y: auto; padding: 6px 18px 10px; font-size: 13px; line-height: 1.6; color: #d9d7ea; }
+      .changelog h1, .changelog h2, .changelog h3 { font-size: 13px; font-weight: 650; margin: 15px 0 6px; color: #fff; }
+      .changelog h1:first-child, .changelog h2:first-child, .changelog h3:first-child { margin-top: 2px; }
+      .changelog ul { margin: 6px 0; padding-left: 20px; }
+      .changelog li { margin: 4px 0; }
+      .changelog p { margin: 8px 0; }
+      .changelog a { color: var(--blue); }
+      .changelog code { font-size: 11px; padding: 1px 5px; }
+      .modal-foot { padding: 13px 18px 18px; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; }
+      .modal-foot button { padding: 9px 20px; font-size: 13px; }
     </style>
   </head>
   <body>
@@ -154,13 +180,8 @@
     </div>
 
     <div id="updateBanner" class="banner hidden">
-      <span id="updateText">An update is ready.</span>
-      <button id="restartUpdate" class="secondary">Restart &amp; update</button>
-    </div>
-
-    <div id="manualUpdateBanner" class="banner hidden">
-      <span id="manualUpdateText">An update is available.</span>
-      <button id="downloadUpdate" class="secondary">Download &amp; open</button>
+      <span id="updateText">An update is available.</span>
+      <button id="viewUpdate" class="secondary">View changelog &amp; download update</button>
     </div>
 
     <div class="card">
@@ -221,6 +242,22 @@
     </div>
 
     <div id="msg"></div>
+
+    <div id="updateModal" class="modal hidden">
+      <div class="modal-card">
+        <div class="modal-head">
+          <div>
+            <div class="modal-title" id="updateModalTitle">Update available</div>
+            <div class="modal-sub" id="updateModalSub">A new version is ready to install.</div>
+          </div>
+          <button id="updateLater" class="link">Later</button>
+        </div>
+        <div id="changelogBody" class="changelog">Loading release notes…</div>
+        <div class="modal-foot">
+          <button id="installUpdateBtn">Install update</button>
+        </div>
+      </div>
+    </div>
 
     <script src="renderer.js"></script>
   </body>
