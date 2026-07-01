@@ -64,7 +64,7 @@ jobs:
           VER="${VER#v}"
           node -e "const fs=require('fs');const f='packages/desktop/package.json';const p=JSON.parse(fs.readFileSync(f));p.version='$VER';fs.writeFileSync(f,JSON.stringify(p,null,2)+'\n');console.log('app version set to '+p.version)"
       # electron-builder 只负责构建，不发布（发布由下方 action-gh-release 做）。
-      - name: Package installers (arm64 + x64)
+      - name: Package installers (mac Universal / win x64)
         run: npm run dist --workspace packages/desktop
       - uses: actions/upload-artifact@v4
         with:
