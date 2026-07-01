@@ -29,6 +29,8 @@
   <rect width="1024" height="1024" rx="232" fill="url(#bg)"/>
   <rect width="1024" height="1024" rx="232" fill="url(#sheen)"/>
 
+  <!-- center group scaled up around the tile center for a larger cube + spark -->
+  <g transform="translate(512 512) scale(1.3) translate(-512 -512)">
   <!-- isometric cube: a nod to Roblox Studio's 3D world -->
   <g filter="url(#cubeShadow)">
     <polygon points="512,296 704,406 512,516 320,406" fill="url(#topFace)"/>
@@ -43,5 +45,6 @@
   <g transform="translate(716,352)" filter="url(#sparkGlow)">
     <path d="M0,-70 C12,-22 22,-12 70,0 C22,12 12,22 0,70 C-12,22 -22,12 -70,0 C-22,-12 -12,-22 0,-70 Z" fill="url(#spark)"/>
     <circle r="15" fill="#ffffff" fill-opacity="0.9"/>
+  </g>
   </g>
 </svg>
