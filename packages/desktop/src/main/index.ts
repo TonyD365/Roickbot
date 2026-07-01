@@ -81,6 +81,12 @@ function createWindow(): void {
   void win.loadFile(join(__dirname, "..", "renderer", "index.html"));
   if (DEBUG) win.webContents.openDevTools({ mode: "detach" });
 
+  // 窗口关闭后置空引用：macOS 关窗不退出，之后从 Dock/托盘触发动作时
+  // 若还向已销毁的窗口发消息会抛 "Object has been destroyed"。
+  win.on("closed", () => {
+    win = null;
+  });
+
   // 开发用：CLAUDE_RBX_SCREENSHOT=<path> 时，加载后截图保存（供 UI 迭代验证）。
   if (process.env.CLAUDE_RBX_SCREENSHOT) {
     win.webContents.on("did-finish-load", () => {
@@ -96,6 +102,11 @@ function createWindow(): void {
       }, 700);
     });
   }
+}
+
+/** 安全地向渲染进程发消息：窗口已关闭/销毁时静默忽略（防 "Object has been destroyed"）。 */
+function sendToRenderer(channel: string, payload?: unknown): void {
+  if (win && !win.isDestroyed()) win.webContents.send(channel, payload);
 }
 
 /** 显示（或新建）主窗口并聚焦。 */
@@ -356,12 +367,12 @@ function startAutoUpdate(): void {
         const arch = process.arch === "arm64" ? "arm64" : "x64";
         const file = `Claude-for-Roblox-Studio-${info.version}-${arch}.dmg`;
         const url = `https://github.com/${REPO}/releases/download/v${info.version}/${file}`;
-        win?.webContents.send("update-manual", { version: info.version, url });
+        sendToRenderer("update-manual", { version: info.version, url });
       }
     });
     autoUpdater.on("update-downloaded", (info) => {
       console.log("[updater] downloaded:", info.version);
-      win?.webContents.send("update-ready", info.version);
+      sendToRenderer("update-ready", info.version);
     });
     // .catch 避免未处理的 Promise 拒绝（例如无网络/404）。
     autoUpdater.checkForUpdates().catch((e) => console.error("[updater] check failed:", e?.message ?? e));
@@ -386,10 +397,10 @@ if (!app.requestSingleInstanceLock()) {
       core = await import("@claude-roblox/core");
       service = new core.CoreService({ tokenPath: join(app.getPath("userData"), "token") });
       service.on("status", (s: CoreStatus) => {
-        win?.webContents.send("status", s);
+        sendToRenderer("status", s);
         updateMenus(); // Start/Stop 标签、token 相关项随状态刷新
       });
-      service.on("handshake", (info: unknown) => win?.webContents.send("handshake", info));
+      service.on("handshake", (info: unknown) => sendToRenderer("handshake", info));
       console.log("[main] core service loaded");
       updateMenus(); // core 加载后 token 已可用 → 刷新菜单可用项
     } catch (e) {
