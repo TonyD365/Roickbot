@@ -1,0 +1,47 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bgc" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#6E5CF3"/>
+      <stop offset="1" stop-color="#3D2FB4"/>
+    </linearGradient>
+    <linearGradient id="sheenc" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.18"/>
+      <stop offset="0.55" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+    <radialGradient id="sparkc" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#FFDCCB"/>
+      <stop offset="0.55" stop-color="#F2A088"/>
+      <stop offset="1" stop-color="#E27B5C"/>
+    </radialGradient>
+    <filter id="dsc" x="-40%" y="-40%" width="180%" height="180%">
+      <feDropShadow dx="0" dy="16" stdDeviation="22" flood-color="#160E45" flood-opacity="0.35"/>
+    </filter>
+  </defs>
+
+  <rect width="1024" height="1024" rx="232" fill="url(#bgc)"/>
+  <rect width="1024" height="1024" rx="232" fill="url(#sheenc)"/>
+
+  <!-- "bridge": a Studio hexagon linked to a Claude spark -->
+  <g filter="url(#dsc)">
+    <!-- connector bar -->
+    <rect x="392" y="478" width="240" height="68" rx="34" fill="#ffffff" fill-opacity="0.92"/>
+    <!-- left node: rounded hexagon (Roblox / 3D world) -->
+    <path d="M360,340
+             a44,44 0 0 1 44,25.4
+             l52,90
+             a44,44 0 0 1 0,44
+             l-52,90
+             a44,44 0 0 1 -38,22
+             h-12
+             a44,44 0 0 1 -38,-22
+             l-52,-90
+             a44,44 0 0 1 0,-44
+             l52,-90
+             a44,44 0 0 1 44,-25.4 z" fill="#ffffff"/>
+    <!-- right node: coral spark (AI) -->
+    <g transform="translate(672,512)">
+      <path d="M0,-150 C26,-46 46,-26 150,0 C46,26 26,46 0,150 C-26,46 -46,26 -150,0 C-46,-26 -26,-46 0,-150 Z" fill="url(#sparkc)"/>
+      <circle r="30" fill="#ffffff" fill-opacity="0.9"/>
+    </g>
+  </g>
+</svg>

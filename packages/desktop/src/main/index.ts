@@ -1,7 +1,7 @@
 // Electron 主进程：启停核心服务、管理 UI、处理 IPC、后台自动更新。
 // 主进程为 CommonJS；核心包是 ESM-only，故通过动态 import 加载。
 
-import { app, BrowserWindow, ipcMain, dialog, shell, net } from "electron";
+import { app, BrowserWindow, ipcMain, dialog, shell, net, Tray, Menu, nativeImage } from "electron";
 import { join } from "node:path";
 import { copyFile } from "node:fs/promises";
 import { createWriteStream } from "node:fs";
@@ -25,6 +25,7 @@ interface CoreStatus {
 }
 
 let win: BrowserWindow | null = null;
+let tray: Tray | null = null;
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let core: any;
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -78,6 +79,45 @@ function createWindow(): void {
 
   void win.loadFile(join(__dirname, "..", "renderer", "index.html"));
   if (DEBUG) win.webContents.openDevTools({ mode: "detach" });
+}
+
+/** 显示（或新建）主窗口并聚焦。 */
+function showWindow(): void {
+  if (!win || win.isDestroyed()) {
+    createWindow();
+    return;
+  }
+  if (win.isMinimized()) win.restore();
+  win.show();
+  win.focus();
+}
+
+/** 创建菜单栏 / 系统托盘图标（macOS 用模板图，自动适配深浅色）。 */
+function createTray(): void {
+  if (tray) return;
+  try {
+    const assetPath = (name: string) => join(__dirname, "..", "assets", name);
+    const image = isMac
+      ? nativeImage.createFromPath(assetPath("trayTemplate.png"))
+      : nativeImage.createFromPath(assetPath("tray.png"));
+    if (isMac) image.setTemplateImage(true);
+    // 图标缺失时 image 为空 —— 此时跳过，避免出现一个不可见/占位的托盘项。
+    if (image.isEmpty()) {
+      console.warn("[main] tray image missing; skipping tray");
+      return;
+    }
+    tray = new Tray(image);
+    tray.setToolTip(`Claude for Roblox Studio v${app.getVersion()}`);
+    const menu = Menu.buildFromTemplate([
+      { label: "Open Claude for Roblox Studio", click: () => showWindow() },
+      { type: "separator" },
+      { label: "Quit", role: "quit" },
+    ]);
+    tray.setContextMenu(menu);
+    tray.on("click", () => showWindow());
+  } catch (e) {
+    console.error("[main] failed to create tray:", e);
+  }
 }
 
 function registerIpc(): void {
@@ -243,18 +283,13 @@ function startAutoUpdate(): void {
 if (!app.requestSingleInstanceLock()) {
   app.quit();
 } else {
-  app.on("second-instance", () => {
-    if (win) {
-      if (win.isMinimized()) win.restore();
-      win.show();
-      win.focus();
-    }
-  });
+  app.on("second-instance", () => showWindow());
 
   void app.whenReady().then(async () => {
     // 先建窗口 + 注册 IPC，保证即使 core 加载失败也有界面和报错可看。
     registerIpc();
     createWindow();
+    createTray();
 
     try {
       core = await import("@claude-roblox/core");

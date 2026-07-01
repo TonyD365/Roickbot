@@ -1,0 +1,8 @@
+<svg width="128" height="128" viewBox="0 0 128 128" xmlns="http://www.w3.org/2000/svg">
+  <!-- Menu-bar glyph: a wireframe iso-cube + a spark. Black + alpha = macOS template image. -->
+  <g fill="none" stroke="#000000" stroke-width="10" stroke-linejoin="round" stroke-linecap="round">
+    <polygon points="60,30 96,50 96,90 60,110 24,90 24,50"/>
+    <path d="M24,50 L60,70 L96,50 M60,70 L60,110"/>
+  </g>
+  <path d="M104,8 C107,20 111,24 123,27 C111,30 107,34 104,46 C101,34 97,30 85,27 C97,24 101,20 104,8 Z" fill="#000000"/>
+</svg>

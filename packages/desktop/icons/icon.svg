@@ -1,0 +1,47 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#8271F8"/>
+      <stop offset="1" stop-color="#4632C9"/>
+    </linearGradient>
+    <linearGradient id="sheen" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.20"/>
+      <stop offset="0.55" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="topFace" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="1" stop-color="#F1EEFF"/>
+    </linearGradient>
+    <radialGradient id="spark" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#FFD9C8"/>
+      <stop offset="0.5" stop-color="#F2A088"/>
+      <stop offset="1" stop-color="#E27B5C"/>
+    </radialGradient>
+    <filter id="cubeShadow" x="-40%" y="-40%" width="180%" height="180%">
+      <feDropShadow dx="0" dy="22" stdDeviation="30" flood-color="#180F49" flood-opacity="0.38"/>
+    </filter>
+    <filter id="sparkGlow" x="-120%" y="-120%" width="340%" height="340%">
+      <feGaussianBlur stdDeviation="16" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+
+  <rect width="1024" height="1024" rx="232" fill="url(#bg)"/>
+  <rect width="1024" height="1024" rx="232" fill="url(#sheen)"/>
+
+  <!-- isometric cube: a nod to Roblox Studio's 3D world -->
+  <g filter="url(#cubeShadow)">
+    <polygon points="512,296 704,406 512,516 320,406" fill="url(#topFace)"/>
+    <polygon points="320,406 512,516 512,728 320,618" fill="#D7D1FA"/>
+    <polygon points="512,516 704,406 704,618 512,728" fill="#B7ADEF"/>
+    <!-- edge highlights -->
+    <polyline points="320,406 512,516 704,406" fill="none" stroke="#ffffff" stroke-opacity="0.55" stroke-width="6"/>
+    <line x1="512" y1="516" x2="512" y2="728" stroke="#ffffff" stroke-opacity="0.28" stroke-width="6"/>
+  </g>
+
+  <!-- Claude-coral spark: the AI connection -->
+  <g transform="translate(716,352)" filter="url(#sparkGlow)">
+    <path d="M0,-70 C12,-22 22,-12 70,0 C22,12 12,22 0,70 C-12,22 -22,12 -70,0 C-22,-12 -12,-22 0,-70 Z" fill="url(#spark)"/>
+    <circle r="15" fill="#ffffff" fill-opacity="0.9"/>
+  </g>
+</svg>

@@ -19,7 +19,8 @@ publish:
 
 directories:
   output: release
-  buildResources: build
+  # 图标源（icons/icon.png）放在这里；electron-builder 会从它生成 icns/ico。
+  buildResources: icons
 
 files:
   - dist/**/*
