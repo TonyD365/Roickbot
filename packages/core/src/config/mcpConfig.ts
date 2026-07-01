@@ -6,7 +6,7 @@ import { promises as fs } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 
-export const MCP_SERVER_KEY = "brickbot";
+export const MCP_SERVER_KEY = "roickbot";
 
 /** 受支持的 MCP 客户端。 */
 export type McpClient = "claude" | "cursor" | "gemini" | "cline" | "vscode";

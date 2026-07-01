@@ -13,7 +13,7 @@ const out = resolve(process.argv[2] || join(appDir, "ui-screenshot.png"));
 
 const child = spawn("xvfb-run", ["-a", electronPath, appDir, "--no-sandbox", "--disable-gpu"], {
   cwd: appDir,
-  env: { ...process.env, BRICKBOT_DEBUG: "0", BRICKBOT_SCREENSHOT: out },
+  env: { ...process.env, ROICKBOT_DEBUG: "0", ROICKBOT_SCREENSHOT: out },
   detached: true,
 });
 

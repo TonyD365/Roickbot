@@ -82,7 +82,7 @@ const sessionId = r.headers.get("mcp-session-id");
 const text = await r.text();
 check("MCP initialize returns 200", r.status === 200);
 check("MCP initialize returns a session id", !!sessionId);
-check("MCP initialize advertises server name", text.includes("brickbot"));
+check("MCP initialize advertises server name", text.includes("roickbot"));
 
 async function callTool(id, name, args) {
   const rr = await fetch(`${base}/mcp`, {

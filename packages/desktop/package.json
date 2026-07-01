@@ -1,7 +1,7 @@
 {
-  "name": "@brickbot/desktop",
+  "name": "@roickbot/desktop",
   "version": "0.1.0",
-  "description": "Desktop app (Electron) for Brickbot.",
+  "description": "Desktop app (Electron) for Roickbot.",
   "license": "MIT",
   "author": "TonyD365",
   "repository": {
@@ -17,7 +17,7 @@
     "dist": "npm run build && electron-builder --config electron-builder.yml --publish never"
   },
   "dependencies": {
-    "@brickbot/core": "0.1.0",
+    "@roickbot/core": "0.1.0",
     "electron-updater": "^6.3.9"
   },
   "devDependencies": {

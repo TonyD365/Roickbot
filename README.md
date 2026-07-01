@@ -1,4 +1,4 @@
-# Brickbot
+# Roickbot
 
 [![CI](https://github.com/TonyD365/Brickbot/actions/workflows/ci.yml/badge.svg)](https://github.com/TonyD365/Brickbot/actions/workflows/ci.yml)
 [![Latest release](https://img.shields.io/github/v/release/TonyD365/Brickbot?sort=semver)](https://github.com/TonyD365/Brickbot/releases/latest)
@@ -100,13 +100,13 @@ See [docs/PROTOCOL.md](docs/PROTOCOL.md) for the full wire protocol.
    [Releases](https://github.com/TonyD365/Brickbot/releases) page — a macOS `.dmg`
    (Universal: Intel + Apple Silicon) or a Windows `.exe` (x64, runs on Intel and ARM).
 2. **Start the service** in the app, pick your client from the dropdown (Claude Code, Cursor,
-   Gemini CLI, Cline, VS Code) and click **Install MCP config** — the app writes the `brickbot`
+   Gemini CLI, Cline, VS Code) and click **Install MCP config** — the app writes the `roickbot`
    server in that client's exact format and location for you. Then restart the client.
 3. **Install the plugin**: if it shows offline, click **Install plugin** and save
-   `Brickbot.rbxmx` into your Studio Plugins folder.
+   `Roickbot.rbxmx` into your Studio Plugins folder.
 4. **Enable HTTP** in Studio's Command Bar (once per place):
    `game:GetService("HttpService").HttpEnabled = true`
-5. **Pair**: copy the token from the app, paste it into the Brickbot plugin panel in Studio,
+5. **Pair**: copy the token from the app, paste it into the Roickbot plugin panel in Studio,
    and click **Connect**.
 6. **Verify**: ask Claude to call the `health` tool — it should report `pluginConnected: true`.
 
@@ -125,7 +125,7 @@ To run the desktop app from source you also need the Electron binary (run `npm i
 `ELECTRON_SKIP_BINARY_DOWNLOAD`) and a built plugin:
 
 ```bash
-npm run build:plugin     # requires Rojo (see plugin/aftman.toml) -> dist/Brickbot.rbxmx
+npm run build:plugin     # requires Rojo (see plugin/aftman.toml) -> dist/Roickbot.rbxmx
 npm run build:desktop
 npm start --workspace packages/desktop
 ```
@@ -184,7 +184,7 @@ client automatically (each one differs slightly, e.g. Cline needs `streamableHtt
 ```json
 {
   "mcpServers": {
-    "brickbot": {
+    "roickbot": {
       "httpUrl": "http://127.0.0.1:7331/mcp",
       "headers": { "Authorization": "Bearer PASTE_TOKEN", "X-Roblox-MCP": "1" }
     }
@@ -236,7 +236,7 @@ MIT
 
 <br>
 
-# Brickbot（中文）
+# Roickbot（中文）
 
 [![CI](https://github.com/TonyD365/Brickbot/actions/workflows/ci.yml/badge.svg)](https://github.com/TonyD365/Brickbot/actions/workflows/ci.yml)
 [![Latest release](https://img.shields.io/github/v/release/TonyD365/Brickbot?sort=semver)](https://github.com/TonyD365/Brickbot/releases/latest)
@@ -321,12 +321,12 @@ Studio 插件通过 **WebSocket**（Studio 的 `HttpService:CreateWebStreamClien
 1. 从 [Releases](https://github.com/TonyD365/Brickbot/releases) 页面**下载桌面应用**
    （Windows `.exe` 或 macOS `.dmg`，arm64 / x64）。
 2. 在应用里**启动服务**，从下拉框选择你的客户端（Claude Code、Cursor、Gemini CLI、Cline、VS Code）
-   再点 **Install MCP config** —— 应用会按该客户端正确的格式与路径自动写入 `brickbot` 服务，
+   再点 **Install MCP config** —— 应用会按该客户端正确的格式与路径自动写入 `roickbot` 服务，
    然后重启对应客户端。
-3. **安装插件**：若显示离线，点 **Install plugin**，把 `Brickbot.rbxmx` 保存到 Studio 的 Plugins 目录。
+3. **安装插件**：若显示离线，点 **Install plugin**，把 `Roickbot.rbxmx` 保存到 Studio 的 Plugins 目录。
 4. 在 Studio 命令栏**启用 HTTP**（每个 place 一次）：
    `game:GetService("HttpService").HttpEnabled = true`
-5. **配对**：从应用复制 token，粘贴进 Studio 里的 Brickbot 插件面板，点 **Connect**。
+5. **配对**：从应用复制 token，粘贴进 Studio 里的 Roickbot 插件面板，点 **Connect**。
 6. **验证**：让 Claude 调用 `health` 工具 —— 应返回 `pluginConnected: true`。
 
 完整步骤见 [docs/INSTALL.md](docs/INSTALL.md)。
@@ -344,7 +344,7 @@ node smoke.mjs           # 端到端桥烟雾测试（无需 Studio）
 `ELECTRON_SKIP_BINARY_DOWNLOAD`）以及构建好的插件：
 
 ```bash
-npm run build:plugin     # 需要 Rojo（见 plugin/aftman.toml） -> dist/Brickbot.rbxmx
+npm run build:plugin     # 需要 Rojo（见 plugin/aftman.toml） -> dist/Roickbot.rbxmx
 npm run build:desktop
 npm start --workspace packages/desktop
 ```
@@ -396,7 +396,7 @@ npm start --workspace packages/desktop
 ```json
 {
   "mcpServers": {
-    "brickbot": {
+    "roickbot": {
       "httpUrl": "http://127.0.0.1:7331/mcp",
       "headers": { "Authorization": "Bearer 粘贴你的token", "X-Roblox-MCP": "1" }
     }
