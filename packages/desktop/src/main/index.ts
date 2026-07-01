@@ -396,9 +396,8 @@ function startAutoUpdate(): void {
     autoUpdater.on("update-available", (info) => {
       console.log("[updater] update available:", info.version);
       if (isMac) {
-        // mac 未签名：按需下载 dmg，先弹更新日志（附下载按钮）。
-        const arch = process.arch === "arm64" ? "arm64" : "x64";
-        const file = `Claude-for-Roblox-Studio-${info.version}-${arch}.dmg`;
+        // mac 未签名：按需下载 Universal dmg，先弹更新日志（附下载按钮）。
+        const file = `Claude-for-Roblox-Studio-${info.version}-universal.dmg`;
         const url = `https://github.com/${REPO}/releases/download/v${info.version}/${file}`;
         void announceUpdate(info.version, "mac", url);
       }

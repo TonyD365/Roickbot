@@ -38,16 +38,19 @@ npmRebuild: false
 
 mac:
   category: public.app-category.developer-tools
+  # 单一 Universal 包（arm64 + x64 合并），Intel 与 Apple Silicon 通用。
   target:
     - target: dmg
-      arch: [arm64, x64]
+      arch: universal
     - target: zip
-      arch: [arm64, x64]
+      arch: universal
 
 win:
+  # Windows 没有"Universal 二进制"这种东西。x64 安装包在 Intel 和 ARM（ARM 通过内置 x64
+  # 模拟运行）上都能装能跑，所以只出一个 x64 安装包，效果等同"一个包哪都能用"。
   target:
     - target: nsis
-      arch: [x64, arm64]
+      arch: x64
 
 nsis:
   oneClick: false

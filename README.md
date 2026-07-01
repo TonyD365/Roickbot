@@ -56,7 +56,8 @@ all through natural language from your editor.
   plugin, and writes the Claude Code MCP config for you.
 - **Works with any MCP client** — not just Claude: Gemini, Cursor, VS Code/Copilot, Cline, etc.
   (incl. free options). See [docs/CLIENTS.md](docs/CLIENTS.md).
-- **Cross-platform releases** — CI packages installers for Windows and macOS (arm64 + x64).
+- **Cross-platform releases** — CI packages installers: a macOS **Universal** app (Intel + Apple
+  Silicon) and a Windows x64 installer (runs on Intel and ARM).
 
 ## How it works
 
@@ -96,8 +97,8 @@ See [docs/PROTOCOL.md](docs/PROTOCOL.md) for the full wire protocol.
 ## Installation (end user)
 
 1. **Install the desktop app** from the
-   [Releases](https://github.com/TonyD365/Claude-for-Roblox-Studio/releases) page (Windows `.exe`
-   or macOS `.dmg`, arm64 / x64).
+   [Releases](https://github.com/TonyD365/Claude-for-Roblox-Studio/releases) page — a macOS `.dmg`
+   (Universal: Intel + Apple Silicon) or a Windows `.exe` (x64, runs on Intel and ARM).
 2. **Start the service** in the app, pick your client from the dropdown (Claude Code, Cursor,
    Gemini CLI, Cline, VS Code) and click **Install MCP config** — the app writes the `roblox-studio`
    server in that client's exact format and location for you. Then restart the client.
@@ -281,7 +282,7 @@ MIT
 - **一键配置** —— 桌面应用负责启动服务、显示配对 token、安装插件，并为你写入 Claude Code 的 MCP 配置。
 - **兼容任意 MCP 客户端** —— 不止 Claude：Gemini、Cursor、VS Code/Copilot、Cline 等（含免费方案），
   见 [docs/CLIENTS.md](docs/CLIENTS.md)。
-- **跨平台发布** —— CI 打包 Windows 与 macOS 安装包（arm64 + x64）。
+- **跨平台发布** —— CI 打包 macOS **Universal**（Intel + Apple Silicon 通用）与 Windows x64 安装包（Intel/ARM 都能跑）。
 
 ## 工作原理
 
