@@ -187,10 +187,20 @@
     const u = pendingUpdate;
     if (!u) return;
     if (u.kind === "win") { await api.restartToUpdate(); return; }
-    flash("Downloading update… this can take a minute.");
-    const r = await api.downloadUpdate(u.url);
-    hideUpdateModal();
-    flash(`Saved to ${r.path} and opened it. Drag the app into Applications, then reopen.`);
+    // mac：下载期间禁用按钮并显示 "Downloading…"，防重复点击；完成/失败后复原。
+    const btn = el("installUpdateBtn");
+    const label = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = "Downloading…";
+    try {
+      flash("Downloading update… this can take a minute.");
+      const r = await api.downloadUpdate(u.url);
+      hideUpdateModal();
+      flash(`Saved to ${r.path} and opened it. Drag the app into Applications, then reopen.`);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = label;
+    }
   }));
 
   // 显示版本号，便于区分新旧实例。
