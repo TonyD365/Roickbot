@@ -16,14 +16,14 @@ async function main(): Promise<void> {
 
   await service.start();
 
-  console.log("Brickbot bridge is running.");
+  console.log("Roickbot bridge is running.");
   console.log(`  MCP endpoint : http://127.0.0.1:${service.port}/mcp`);
   console.log(`  Token        : ${service.getToken()}`);
   console.log("");
   console.log("Add this to your Claude Code .mcp.json:");
-  console.log(JSON.stringify({ mcpServers: { "brickbot": buildMcpEntry(service.port, service.getToken()) } }, null, 2));
+  console.log(JSON.stringify({ mcpServers: { "roickbot": buildMcpEntry(service.port, service.getToken()) } }, null, 2));
   console.log("");
-  console.log("Then paste the token into the Brickbot plugin in Roblox Studio and click Connect.");
+  console.log("Then paste the token into the Roickbot plugin in Roblox Studio and click Connect.");
 
   const shutdown = async () => {
     console.log("\nShutting down...");

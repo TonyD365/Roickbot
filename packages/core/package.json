@@ -1,7 +1,7 @@
 {
-  "name": "@brickbot/core",
+  "name": "@roickbot/core",
   "version": "0.1.0",
-  "description": "Core MCP server + Studio bridge + security for Brickbot.",
+  "description": "Core MCP server + Studio bridge + security for Roickbot.",
   "license": "MIT",
   "type": "module",
   "main": "dist/index.js",
@@ -17,7 +17,7 @@
     "start": "node dist/cli.js"
   },
   "bin": {
-    "brickbot-server": "dist/cli.js"
+    "roickbot-server": "dist/cli.js"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.12.0",
