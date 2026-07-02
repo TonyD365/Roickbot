@@ -106,6 +106,7 @@ for (const t of [
   "edit_script_lines", "find_instances", "search_by_property", "get_tagged", "add_tag",
   "search_scripts", "get_script_info", "harness_init", "harness_session_start",
   "harness_feature_update", "fire_signal", "wait_for_event",
+  "toolbox_search", "inspect_asset", "view_selection",
 ]) {
   check(`tools/list includes ${t}`, listText.includes(t));
 }
@@ -114,6 +115,12 @@ for (const t of [
 const callText = await callTool(3, "get_selection", {});
 check("tool round-trip routes through the plugin (WS) and returns its result",
   callText.includes("echoed") && callText.includes("get_selection"));
+
+// 8b. 素材库 / 选择工具也走插件通道。
+const tbText = await callTool(20, "toolbox_search", { query: "sword", limit: 3 });
+check("toolbox_search routes through the plugin", tbText.includes("echoed") && tbText.includes("toolbox_search"));
+const vsText = await callTool(21, "view_selection", {});
+check("view_selection routes through the plugin", vsText.includes("echoed") && vsText.includes("view_selection"));
 
 // 9. Harness 工具在 core 本地处理（不经插件）。
 const featText = await callTool(10, "harness_feature_update", { title: "Smoke feature", priority: "high" });
