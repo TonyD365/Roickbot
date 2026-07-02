@@ -128,6 +128,16 @@ across sessions.
 
 All accept `dryRun` and obey the same path allow/deny list.
 
+## Assets & selection
+
+| Tool | Purpose |
+| --- | --- |
+| `toolbox_search` | Search Roblox's **free** Models/Decals by keyword via `InsertService:GetFreeModels`/`GetFreeDecals` (no internet/login needed — it runs inside Studio). Returns `assetId`, `name`, `creator`. With `inspect:true` (default) each result is loaded off-scene and analyzed: **`hasScripts`**, `scriptCount`, `scriptNames`, `partCount`, class breakdown, bounding `size` — so you can skip models with unwanted/unsafe scripts before inserting one with `insert_model`. |
+| `inspect_asset` | Load one `assetId` off-scene and report the same contents (scripts / parts / classes / size). Safety-check a model before inserting. |
+| `view_selection` | The instances the user has currently selected in Studio, each with details (class, path, properties, `hasScripts`/`scriptCount`, child count; `includeSource` for scripts). Richer than `get_selection` (paths only). |
+
+> These are read-only (they load assets into a throwaway container and destroy it — nothing is added to your scene until you call `insert_model`/`insert_decal`).
+
 ## Phase 3 — Bot vision & self-test loop
 
 | Tool | Purpose |

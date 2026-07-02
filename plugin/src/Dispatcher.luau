@@ -14,6 +14,7 @@ local graphics = require(script.Parent.handlers.graphics)
 local console = require(script.Parent.handlers.console)
 local bot = require(script.Parent.handlers.bot)
 local query = require(script.Parent.handlers.query)
+local toolbox = require(script.Parent.handlers.toolbox)
 
 local Dispatcher = {}
 
@@ -37,6 +38,10 @@ local handlers: { [string]: (any, any) -> any } = {
 	search_by_property = query.search_by_property,
 	get_tagged = query.get_tagged,
 	get_tags = query.get_tags,
+	-- 素材库搜索 / 体检 / 查看选择（只读，不改工程）
+	toolbox_search = toolbox.toolbox_search,
+	inspect_asset = toolbox.inspect_asset,
+	view_selection = toolbox.view_selection,
 	-- 变更
 	set_properties = properties.set_properties,
 	create_instance = instances.create_instance,

@@ -141,6 +141,10 @@ npm start --workspace packages/desktop
 **Phase 2 (make-graphics):** `build_parts`, `set_appearance`, `edit_terrain`, `set_lighting`,
 `insert_decal`, `insert_model`, `build_gui`.
 
+**Assets & selection:** `toolbox_search` (search Roblox free Models/Decals in-Studio; each result flags
+`hasScripts` + parts/classes/size so you can avoid unsafe scripts before inserting), `inspect_asset`
+(safety-check one asset off-scene), `view_selection` (what the user has selected, with details).
+
 **Phase 3 (Bot vision & self-test):** `bot_spawn` (with `asPlayer` to tag it for player-based
 systems), `bot_despawn`, `bot_move`, `bot_look`, `bot_state`, `bot_see`. While a test is running,
 project-editing tools are locked (`RUNTIME_LOCKED`) — the run phase is read-only; reads, `bot_*`,
@@ -359,6 +363,9 @@ npm start --workspace packages/desktop
 
 **第二阶段（做图）：** `build_parts`、`set_appearance`、`edit_terrain`、`set_lighting`、
 `insert_decal`、`insert_model`、`build_gui`。
+
+**素材与选择：** `toolbox_search`（在 Studio 内搜索免费模型/贴图，每条结果标注 `hasScripts` + 零件/类名/大小，
+方便插入前避开带脚本的资源）、`inspect_asset`（离场体检单个资源）、`view_selection`（查看用户当前选中的元素及详情）。
 
 **第三阶段（Bot 视觉 + 自我测试）：** `bot_spawn`（`asPlayer` 可打标签给基于玩家的系统用）、
 `bot_despawn`、`bot_move`、`bot_look`、`bot_state`、`bot_see`。游戏运行时,工程编辑类工具被锁
