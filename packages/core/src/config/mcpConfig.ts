@@ -9,7 +9,7 @@ import { dirname, join } from "node:path";
 export const MCP_SERVER_KEY = "roickbot";
 
 /** 受支持的 MCP 客户端。 */
-export type McpClient = "claude" | "cursor" | "gemini" | "cline" | "vscode";
+export type McpClient = "claude" | "cursor" | "gemini" | "cline" | "vscode" | "codex";
 
 export interface McpClientInfo {
   id: McpClient;
@@ -17,13 +17,20 @@ export interface McpClientInfo {
   /** 固定的默认配置文件路径；为 null 表示路径因项目而异，需要用户用保存框选择。 */
   defaultPath: string | null;
   /** 配置文件里包裹服务条目的键（Claude/Cursor/Gemini/Cline 用 mcpServers，VS Code 用 servers）。 */
-  serversKey: "mcpServers" | "servers";
+  serversKey: "mcpServers" | "servers" | null;
   /** 给用户看的备注（写在 UI / 文档里）。 */
   note: string;
 }
 
 /** 客户端清单（顺序即 UI 下拉顺序）。 */
 export const MCP_CLIENTS: McpClientInfo[] = [
+  {
+    id: "codex",
+    label: "Codex",
+    defaultPath: join(homedir(), ".codex", "config.toml"),
+    serversKey: null,
+    note: "User-level config at ~/.codex/config.toml. Adds a Streamable HTTP MCP server.",
+  },
   {
     id: "claude",
     label: "Claude Code",
@@ -77,6 +84,7 @@ export function clientDefaultPath(client: McpClient): string | null {
  * - Claude Code / Cursor(VS Code 兼容) → type:"http"
  * - Gemini CLI → 用 httpUrl 键（无 type）
  * - Cline → type:"streamableHttp" + disabled/autoApprove
+ * - Codex → TOML [mcp_servers.roickbot] 表（由 writeClientConfig 写入）
  */
 export function buildClientEntry(
   client: McpClient,
@@ -90,6 +98,8 @@ export function buildClientEntry(
   };
 
   switch (client) {
+    case "codex":
+      throw new Error("Codex uses TOML config; use writeClientConfig instead.");
     case "gemini":
       // Gemini CLI 用 httpUrl 键标识 Streamable HTTP 服务。
       return { httpUrl: url, headers };
@@ -103,6 +113,62 @@ export function buildClientEntry(
       // Claude Code / Cursor / VS Code(native) 都接受 type:"http"。
       return { type: "http", url, headers };
   }
+}
+
+function tomlString(value: string): string {
+  return JSON.stringify(value);
+}
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+/** Codex 的远程 MCP 配置块。http_headers 保留本服务所需的两个静态鉴权头。 */
+export function buildCodexEntry(port: number, token: string): string {
+  const url = `http://127.0.0.1:${port}/mcp`;
+  return [
+    "# Managed by Roickbot. Reinstalling updates this server entry.",
+    `[mcp_servers.${MCP_SERVER_KEY}]`,
+    `url = ${tomlString(url)}`,
+    `http_headers = { Authorization = ${tomlString(`Bearer ${token}`)}, "X-Roblox-MCP" = "1" }`,
+    "",
+  ].join("\n");
+}
+
+/**
+ * 合并 Codex 的 TOML 配置，不解析或重排用户已有的其它 TOML 设置。
+ * 精确替换本服务的表，避免重复安装后留下两个 roickbot 配置块。
+ */
+export async function writeCodexConfig(path: string, port: number, token: string): Promise<void> {
+  let existing = "";
+  try {
+    existing = await fs.readFile(path, "utf8");
+  } catch {
+    // 首次安装时从空配置开始。
+  }
+
+  const entry = buildCodexEntry(port, token);
+  const header = `[mcp_servers.${MCP_SERVER_KEY}]`;
+  const start = existing.search(new RegExp(`^${escapeRegExp(header)}$`, "m"));
+  const nextTable = /^\s*\[[^\]]+\]\s*(?:#.*)?$/m;
+  let config: string;
+  if (start >= 0) {
+    const afterStart = start + header.length;
+    const remaining = existing.slice(afterStart);
+    const next = remaining.search(nextTable);
+    const end = next >= 0 ? afterStart + next : existing.length;
+    config = existing.slice(0, start) + entry + existing.slice(end).replace(/^\n+/, "");
+  } else {
+    config = `${existing.replace(/\s*$/, "")}${existing.trim() ? "\n\n" : ""}${entry}`;
+  }
+
+  await fs.mkdir(dirname(path), { recursive: true });
+  try {
+    await fs.copyFile(path, `${path}.bak`);
+  } catch {
+    // 原文件不存在，跳过备份。
+  }
+  await fs.writeFile(path, config, "utf8");
 }
 
 /** 兼容旧调用：默认返回 Claude Code 的条目。 */
@@ -152,10 +218,14 @@ export async function writeClientConfig(
   token: string,
 ): Promise<{ path: string; config: Record<string, unknown> }> {
   const info = clientInfo(client);
+  if (client === "codex") {
+    await writeCodexConfig(path, port, token);
+    return { path, config: {} };
+  }
   const cfg = await readJson(path);
-  const servers = (cfg[info.serversKey] as Record<string, unknown> | undefined) ?? {};
+  const servers = (cfg[info.serversKey!] as Record<string, unknown> | undefined) ?? {};
   servers[MCP_SERVER_KEY] = buildClientEntry(client, port, token);
-  cfg[info.serversKey] = servers;
+  cfg[info.serversKey!] = servers;
 
   await fs.mkdir(dirname(path), { recursive: true });
   // 若已存在则备份。

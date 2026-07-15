@@ -99,7 +99,7 @@ See [docs/PROTOCOL.md](docs/PROTOCOL.md) for the full wire protocol.
 1. **Install the desktop app** from the
    [Releases](https://github.com/TonyD365/Roickbot/releases) page — a macOS `.dmg`
    (Universal: Intel + Apple Silicon) or a Windows `.exe` (x64, runs on Intel and ARM).
-2. **Start the service** in the app, pick your client from the dropdown (Claude Code, Cursor,
+2. **Start the service** in the app, pick your client from the dropdown (Codex, Claude Code, Cursor,
    Gemini CLI, Cline, VS Code) and click **Install MCP config** — the app writes the `roickbot`
    server in that client's exact format and location for you. Then restart the client.
 3. **Install the plugin**: if it shows offline, click **Install plugin** and save
@@ -178,7 +178,7 @@ It's a standard MCP server, so it works with any client that supports remote (HT
 with custom headers — **not just Claude**. Point the client at `http://127.0.0.1:7331/mcp` with the
 `Authorization: Bearer <token>` and `X-Roblox-MCP: 1` headers (the token is shown in the app).
 
-**No manual editing needed:** pick your client (Claude Code, Cursor, Gemini CLI, Cline, VS Code) in
+**No manual editing needed:** pick your client (Codex, Claude Code, Cursor, Gemini CLI, Cline, VS Code) in
 the app's dropdown and click **Install MCP config** — it writes the right `type`/key/path for that
 client automatically (each one differs slightly, e.g. Cline needs `streamableHttp`, Gemini uses
 `httpUrl`).
@@ -324,7 +324,7 @@ Studio 插件通过 **WebSocket**（Studio 的 `HttpService:CreateWebStreamClien
 
 1. 从 [Releases](https://github.com/TonyD365/Roickbot/releases) 页面**下载桌面应用**
    （Windows `.exe` 或 macOS `.dmg`，arm64 / x64）。
-2. 在应用里**启动服务**，从下拉框选择你的客户端（Claude Code、Cursor、Gemini CLI、Cline、VS Code）
+2. 在应用里**启动服务**，从下拉框选择你的客户端（Codex、Claude Code、Cursor、Gemini CLI、Cline、VS Code）
    再点 **Install MCP config** —— 应用会按该客户端正确的格式与路径自动写入 `roickbot` 服务，
    然后重启对应客户端。
 3. **安装插件**：若显示离线，点 **Install plugin**，把 `Roickbot.rbxmx` 保存到 Studio 的 Plugins 目录。
@@ -394,7 +394,7 @@ npm start --workspace packages/desktop
 它是标准 MCP 服务器，**不止 Claude** —— 任何支持"远程(HTTP) MCP + 自定义请求头"的客户端都能用。把客户端
 指向 `http://127.0.0.1:7331/mcp`，带上 `Authorization: Bearer <token>` 和 `X-Roblox-MCP: 1`（token 在 App 里）。
 
-**无需手动改配置：** 在 App 下拉框选好客户端（Claude Code / Cursor / Gemini CLI / Cline / VS Code）再点
+**无需手动改配置：** 在 App 下拉框选好客户端（Codex / Claude Code / Cursor / Gemini CLI / Cline / VS Code）再点
 **Install MCP config**，应用会按各客户端正确的 `type`/键/路径自动写好（每个略有不同，例如 Cline 必须
 `streamableHttp`、Gemini 用 `httpUrl`）。
 

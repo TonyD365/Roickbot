@@ -22,6 +22,7 @@ the **dropdown next to "Install MCP config"** and click the button. The app writ
 
 | Client | Where it writes |
 | --- | --- |
+| Codex | `~/.codex/config.toml` (auto) |
 | Claude Code | `~/.claude.json` (auto) |
 | Cursor | `~/.cursor/mcp.json` (auto) |
 | Gemini CLI | `~/.gemini/settings.json` (auto) |
@@ -29,6 +30,21 @@ the **dropdown next to "Install MCP config"** and click the button. The app writ
 | VS Code | you pick the file (`.vscode/mcp.json`) |
 
 The manual snippets below are kept for reference / unusual setups.
+
+---
+
+## Codex
+
+The app can install this automatically. To configure it manually, add this to
+`~/.codex/config.toml` (or a trusted project's `.codex/config.toml`):
+
+```toml
+[mcp_servers.roickbot]
+url = "http://127.0.0.1:7331/mcp"
+http_headers = { Authorization = "Bearer PASTE_TOKEN_FROM_THE_APP", "X-Roblox-MCP" = "1" }
+```
+
+Restart Codex after changing its configuration.
 
 ---
 
