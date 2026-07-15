@@ -13,7 +13,7 @@ const REPO = "TonyD365/Roickbot";
 const isMac = process.platform === "darwin";
 
 // core 是 ESM-only 包，从 CommonJS 主进程通过动态 import 加载，故这里用宽松类型。
-type McpClient = "claude" | "cursor" | "gemini" | "cline" | "vscode";
+type McpClient = "claude" | "cursor" | "gemini" | "cline" | "vscode" | "codex";
 
 interface CoreStatus {
   running: boolean;
@@ -131,6 +131,7 @@ function showWindow(): void {
 
 // ---- 共享动作（IPC 与 托盘/Dock 菜单都用这些） ----
 const MCP_CLIENT_MENU: { id: McpClient; label: string }[] = [
+  { id: "codex", label: "Codex" },
   { id: "claude", label: "Claude Code" },
   { id: "cursor", label: "Cursor" },
   { id: "gemini", label: "Gemini CLI" },
@@ -220,7 +221,7 @@ async function writeConfig(clientId?: string): Promise<{ written: boolean; cance
     const r = await showSave({
       title: `Save ${info.label} MCP config`,
       defaultPath: defaultConfigFilename(client),
-      filters: [{ name: "MCP config", extensions: ["json"] }],
+      filters: [{ name: "MCP config", extensions: client === "codex" ? ["toml"] : ["json"] }],
     });
     if (r.canceled || !r.filePath) return { written: false, cancelled: true };
     target = r.filePath;
@@ -335,6 +336,7 @@ function registerIpc(): void {
 
 /** 没有固定路径时，给保存框一个合理的默认文件名。 */
 function defaultConfigFilename(client: McpClient): string {
+  if (client === "codex") return "config.toml";
   if (client === "cline") return "cline_mcp_settings.json";
   if (client === "vscode") return "mcp.json";
   return ".mcp.json";

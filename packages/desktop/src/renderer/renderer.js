@@ -25,6 +25,7 @@
   // 把 MCP clientInfo.name 映射成好看的名字。
   function prettyClient(name) {
     const n = String(name).toLowerCase();
+    if (n.includes("codex")) return "Codex";
     if (n.includes("claude")) return "Claude";
     if (n.includes("gemini")) return "Gemini";
     if (n.includes("cursor")) return "Cursor";
