@@ -56,9 +56,9 @@ async function sequentialLatency(n) {
 
 async function throughput(n) {
   const t = performance.now();
-  const promises = [];
-  for (let i = 0; i < n; i++) promises.push(queue.dispatch("get_selection", {}));
-  await Promise.all(promises);
+  // The production bridge sends one command at a time so Studio's synchronous
+  // plugin callback cannot be overwhelmed. Benchmark that same single-flight path.
+  for (let i = 0; i < n; i++) await queue.dispatch("get_selection", {});
   const wallMs = performance.now() - t;
   return { commands: n, wallMs: +wallMs.toFixed(1), opsPerSec: +((n / wallMs) * 1000).toFixed(0) };
 }
