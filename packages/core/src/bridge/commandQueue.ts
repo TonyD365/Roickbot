@@ -24,7 +24,8 @@ export interface DispatchOptions {
 interface InflightEntry {
   resolve: (result: unknown) => void;
   reject: (err: Error) => void;
-  timer: ReturnType<typeof setTimeout>;
+  timer: ReturnType<typeof setTimeout> | null;
+  env: CommandEnvelope;
 }
 
 /** dispatch 在插件返回 ok:false 时抛出的错误类型，携带结构化 code。 */
@@ -43,6 +44,7 @@ const DEFAULT_POLL_TIMEOUT_MS = 25_000;
 /** 超过该时长没有 poll，则认为插件离线。需大于最长命令耗时（run_luau 默认 30s），否则执行长命令时会误判离线。 */
 const PLUGIN_OFFLINE_MS = 75_000;
 const LOG_MAX = 50;
+const MAX_QUEUE_DEPTH = 32;
 
 /** 命令日志条目（供桌面 App 的活动面板展示）。 */
 export interface CommandLogEntry {
@@ -57,6 +59,10 @@ export interface CommandLogEntry {
 export class CommandQueue {
   private pending: CommandEnvelope[] = [];
   private inflight = new Map<string, InflightEntry>();
+  /** 已发给插件、尚未收到 response 的唯一命令。 */
+  private activeId: string | null = null;
+  /** 活动命令超时后不再下发，避免与 Studio 中可能仍在运行的回调并发。 */
+  private needsReconnect = false;
   /** 当前停在 /poll 上、等待命令的 resolver（单条）。 */
   private waiter: { resolve: (env: CommandEnvelope | null) => void; timer: ReturnType<typeof setTimeout> } | null = null;
   private lastPollAt = 0;
@@ -90,6 +96,7 @@ export class CommandQueue {
   setConnectedSession(sessionId: string): void {
     this.connectedSessionId = sessionId;
     this.lastPollAt = Date.now();
+    this.needsReconnect = false;
   }
 
   /** WS 连接关闭时调用：明确标记断开（不必等心跳超时）。 */
@@ -97,6 +104,8 @@ export class CommandQueue {
     this.connectedSessionId = null;
     this.lastPollAt = 0;
     this.pluginTools = null;
+    this.needsReconnect = false;
+    this.rejectAll(new Error("Studio plugin disconnected"));
     // 唤醒停泊的 waiter，让 WS 推送循环及时退出。
     if (this.waiter) {
       clearTimeout(this.waiter.timer);
@@ -120,7 +129,7 @@ export class CommandQueue {
 
   /** 插件是否在线：最近有 poll 心跳，或当前有命令在执行中（执行长命令时不轮询，属正常）。 */
   isPluginConnected(): boolean {
-    if (this.connectedSessionId === null) return false;
+    if (this.connectedSessionId === null || this.needsReconnect) return false;
     if (this.inflight.size > 0) return true; // 正在执行命令 = 插件活着，只是忙。
     return Date.now() - this.lastPollAt < PLUGIN_OFFLINE_MS;
   }
@@ -145,35 +154,65 @@ export class CommandQueue {
 
     this.record({ id: env.id, tool, channel: this.channel, at: Date.now() });
 
-    return new Promise<unknown>((resolve, reject) => {
-      const timer = setTimeout(() => {
-        this.inflight.delete(env.id);
-        // 同时尝试从 pending 移除（若还没被取走）。
-        const idx = this.pending.findIndex((e) => e.id === env.id);
-        if (idx >= 0) this.pending.splice(idx, 1);
-        const entry = this.logById.get(env.id);
-        if (entry) {
-          entry.ok = false;
-          entry.error = "timed out";
-        }
-        reject(new Error(`Timed out waiting for Studio plugin to run "${tool}"`));
-      }, env.deadlineMs + 2_000);
+    if (this.needsReconnect) {
+      const error = new Error("Studio plugin did not finish its previous command. Reconnect the plugin before sending more commands.");
+      const entry = this.logById.get(env.id);
+      if (entry) { entry.ok = false; entry.error = error.message; }
+      return Promise.reject(error);
+    }
+    if (this.pending.length >= MAX_QUEUE_DEPTH) {
+      const error = new Error("Studio command queue is full. Wait for the current commands to finish before continuing.");
+      const entry = this.logById.get(env.id);
+      if (entry) { entry.ok = false; entry.error = error.message; }
+      return Promise.reject(error);
+    }
 
-      this.inflight.set(env.id, { resolve, reject, timer });
-      this.deliver(env);
+    return new Promise<unknown>((resolve, reject) => {
+      this.inflight.set(env.id, { resolve, reject, timer: null, env });
+      this.pending.push(env);
+      this.flush();
     });
   }
 
-  /** 若有停泊的 poll 就直接交付，否则入队。 */
-  private deliver(env: CommandEnvelope): void {
-    if (this.waiter) {
-      const w = this.waiter;
-      this.waiter = null;
-      clearTimeout(w.timer);
-      w.resolve(env);
-    } else {
-      this.pending.push(env);
+  /** 只有没有活动命令时才能把下一条交给插件，保证严格串行。 */
+  private flush(): void {
+    if (this.activeId || !this.waiter || this.needsReconnect) return;
+    const env = this.pending.shift();
+    if (!env) return;
+    const entry = this.inflight.get(env.id);
+    if (!entry) {
+      this.flush();
+      return;
     }
+    this.activeId = env.id;
+    entry.timer = setTimeout(() => this.timeoutActive(env.id), env.deadlineMs + 2_000);
+    const waiter = this.waiter;
+    this.waiter = null;
+    clearTimeout(waiter.timer);
+    waiter.resolve(env);
+  }
+
+  private timeoutActive(id: string): void {
+    const entry = this.inflight.get(id);
+    if (!entry) return;
+    this.needsReconnect = true;
+    this.activeId = null;
+    const error = new Error(`Timed out waiting for Studio plugin to run "${entry.env.tool}". Reconnect the plugin before continuing.`);
+    const logEntry = this.logById.get(id);
+    if (logEntry) { logEntry.ok = false; logEntry.error = "timed out"; }
+    this.rejectAll(error);
+  }
+
+  private rejectAll(error: Error): void {
+    for (const [id, entry] of this.inflight) {
+      if (entry.timer) clearTimeout(entry.timer);
+      const logEntry = this.logById.get(id);
+      if (logEntry && logEntry.ok === undefined) { logEntry.ok = false; logEntry.error = error.message; }
+      entry.reject(error);
+    }
+    this.inflight.clear();
+    this.pending = [];
+    this.activeId = null;
   }
 
   /**
@@ -183,9 +222,6 @@ export class CommandQueue {
   poll(sessionId: string): Promise<CommandEnvelope | null> {
     this.lastPollAt = Date.now();
     if (this.connectedSessionId === null) this.connectedSessionId = sessionId;
-
-    const next = this.pending.shift();
-    if (next) return Promise.resolve(next);
 
     // 没有命令：停泊一个 waiter（仅保留最新的一个）。
     if (this.waiter) {
@@ -199,15 +235,17 @@ export class CommandQueue {
         resolve(null);
       }, this.pollTimeoutMs);
       this.waiter = { resolve, timer };
+      this.flush();
     });
   }
 
   /** 插件回传结果，解析对应的 inflight Promise。 */
   resolveResponse(res: ResponseEnvelope): boolean {
     const entry = this.inflight.get(res.id);
-    if (!entry) return false; // 迟到或未知 id，丢弃。
+    if (!entry || this.activeId !== res.id) return false; // 迟到、未知或非活动命令。
     this.inflight.delete(res.id);
-    clearTimeout(entry.timer);
+    if (entry.timer) clearTimeout(entry.timer);
+    this.activeId = null;
     const logEntry = this.logById.get(res.id);
     if (logEntry) {
       logEntry.ok = res.ok;
@@ -218,6 +256,7 @@ export class CommandQueue {
     } else {
       entry.reject(new CommandFailure(res.error ?? { code: "UNKNOWN", message: "Unknown plugin error" }));
     }
+    this.flush();
     return true;
   }
 
@@ -228,12 +267,7 @@ export class CommandQueue {
       this.waiter.resolve(null);
       this.waiter = null;
     }
-    for (const [, entry] of this.inflight) {
-      clearTimeout(entry.timer);
-      entry.reject(new Error("Server shutting down"));
-    }
-    this.inflight.clear();
-    this.pending = [];
+    this.rejectAll(new Error("Server shutting down"));
     this.connectedSessionId = null;
     this.pluginTools = null;
   }

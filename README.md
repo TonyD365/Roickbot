@@ -168,9 +168,9 @@ across sessions even with Studio offline.
 
 **Universal:** `run_luau`.
 
-All mutating tools accept `dryRun: true` to preview without applying. There are **no artificial size
-limits** — use `maxDepth` / `get_children` / `view_elements` filters to control payload size on
-large projects. Full reference: [docs/TOOLS.md](docs/TOOLS.md).
+All mutating tools accept `dryRun: true` to preview without applying. Read results are capped for
+responsiveness — inspect large projects incrementally with `maxDepth`, `maxNodes`, `limit`, and
+pagination rather than requesting the whole DataModel at once. Full reference: [docs/TOOLS.md](docs/TOOLS.md).
 
 ## Use with other AI clients
 
@@ -386,8 +386,8 @@ npm start --workspace packages/desktop
 
 **万能：** `run_luau`。
 
-所有变更类工具都支持 `dryRun: true` 以仅预览不落地。**没有任何人为尺寸上限** —— 在大型工程上用
-`maxDepth` / `get_children` / `view_elements` 的筛选来控制返回量。完整参考见 [docs/TOOLS.md](docs/TOOLS.md)。
+所有变更类工具都支持 `dryRun: true` 以仅预览不落地。读取结果有安全上限，避免大型工程卡住 Studio；使用
+`maxDepth`、`maxNodes`、`limit` 和分页逐步读取，再配合 `get_children` / `view_elements` 的筛选来控制返回量。完整参考见 [docs/TOOLS.md](docs/TOOLS.md)。
 
 ## 用在其它 AI 客户端
 

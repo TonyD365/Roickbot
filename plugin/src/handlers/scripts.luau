@@ -5,6 +5,8 @@ local Text = require(script.Parent.Parent.Text)
 local ScriptEditorService = game:GetService("ScriptEditorService")
 
 local M = {}
+local DEFAULT_SOURCE_CHARS = 50_000
+local MAX_SOURCE_CHARS = 200_000
 
 -- 读脚本源码（优先编辑器源，退回 .Source）。
 local function readSource(inst: Instance): string?
@@ -41,7 +43,14 @@ function M.get_script_source(args: any)
 		end
 		src = s2
 	end
-	return { path = Safety.pathOf(inst), source = src }
+	local maxChars = math.clamp(math.floor(tonumber(args.maxChars) or DEFAULT_SOURCE_CHARS), 1, MAX_SOURCE_CHARS)
+	local truncated = #src > maxChars
+	return {
+		path = Safety.pathOf(inst),
+		source = if truncated then string.sub(src, 1, maxChars) else src,
+		charCount = #src,
+		truncated = truncated,
+	}
 end
 
 function M.set_script_source(args: any, env: any)

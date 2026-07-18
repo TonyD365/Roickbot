@@ -111,8 +111,8 @@ across sessions.
   `ReplicatedFirst`, `ServerScriptService`, `StarterGui`, `StarterPack`, `StarterPlayer`,
   `Lighting`, `SoundService`, `Teams`.
 - `CoreGui`, `CorePackages`, `RobloxPluginGuiService` and similar are never readable/mutable.
-- There are **no artificial size limits** — large projects are supported. Use `maxDepth` /
-  `get_children` / `view_elements` filters to control how much data you pull back.
+- Read tools apply safe defaults and hard caps to keep Studio responsive. Use `maxDepth`, `maxNodes`,
+  `limit`, and pagination (`cursor` / `nextCursor`) to inspect large projects incrementally.
 
 ## Phase 2 — make-graphics
 

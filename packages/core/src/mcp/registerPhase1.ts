@@ -46,7 +46,7 @@ export function registerPhase1Tools(server: McpServer, ctx: ToolContext): void {
         "to expand large projects lazily.",
       inputSchema: {
         rootPath: z.string().optional().describe('e.g. "Workspace" or "Workspace/Model". Omit for game root.'),
-        maxDepth: z.number().int().min(1).optional().describe("How many levels deep to expand (default 3)."),
+        maxDepth: z.number().int().min(1).max(8).optional().describe("How many levels deep to expand (default 3, max 8)."),
         classWhitelist: z.array(z.string()).optional().describe("Only include these class names."),
         excludeClassWhitelist: z
           .array(z.string())
@@ -56,8 +56,9 @@ export function registerPhase1Tools(server: McpServer, ctx: ToolContext): void {
           .number()
           .int()
           .min(1)
+          .max(2_000)
           .optional()
-          .describe("Safety cap on total nodes returned; result has truncated:true if hit (default: unlimited)."),
+          .describe("Safety cap on total nodes returned; result has truncated:true if hit (default 500, max 2,000)."),
       },
     },
     async (args) => forward(ctx, "get_tree", args),
@@ -68,7 +69,11 @@ export function registerPhase1Tools(server: McpServer, ctx: ToolContext): void {
     {
       title: "Get children of an instance",
       description: "List the direct children of an instance. Use for lazy expansion of large trees.",
-      inputSchema: { path: z.string() },
+      inputSchema: {
+        path: z.string(),
+        limit: z.number().int().min(1).max(500).optional(),
+        cursor: z.number().int().min(0).optional(),
+      },
     },
     async (args) => forward(ctx, "get_children", args),
   );
@@ -82,11 +87,13 @@ export function registerPhase1Tools(server: McpServer, ctx: ToolContext): void {
         "paths, or by classNameFilter within an optional rootPath subtree. Returns each element's properties, " +
         "geometry (size/CFrame/color/material) and parent. Set includeSource:true to also return script source.",
       inputSchema: {
-        paths: z.array(z.string()).optional().describe("Explicit element paths to inspect."),
+        paths: z.array(z.string()).max(250).optional().describe("Explicit element paths to inspect."),
         rootPath: z.string().optional().describe("Limit className search to this subtree."),
         classNameFilter: z.string().optional().describe('e.g. "Part" or "Script".'),
         includeSource: z.boolean().optional().describe("Include source for Script/LocalScript/ModuleScript."),
         props: z.array(z.string()).optional().describe("Restrict returned properties to this list."),
+        limit: z.number().int().min(1).max(250).optional().describe("Max elements per page (default 100)."),
+        cursor: z.number().int().min(0).optional().describe("Skip this many matching elements."),
       },
     },
     async (args) => forward(ctx, "view_elements", args),
@@ -190,7 +197,10 @@ export function registerPhase1Tools(server: McpServer, ctx: ToolContext): void {
     {
       title: "Get script source",
       description: "Read the source of a Script / LocalScript / ModuleScript.",
-      inputSchema: { path: z.string() },
+      inputSchema: {
+        path: z.string(),
+        maxChars: z.number().int().min(1).max(200_000).optional().describe("Max source characters (default 50,000)."),
+      },
     },
     async (args) => forward(ctx, "get_script_source", args),
   );
@@ -289,7 +299,7 @@ export function registerPhase1Tools(server: McpServer, ctx: ToolContext): void {
         "Return recent Studio Output messages (prints, info, warnings, errors) from LogService. " +
         "Use after run_luau or after running the game to see what was logged and to debug errors.",
       inputSchema: {
-        count: z.number().int().min(1).optional().describe("Max recent messages to return (default 100)."),
+        count: z.number().int().min(1).max(500).optional().describe("Max recent messages to return (default 100, max 500)."),
         order: z
           .enum(["newest", "oldest"])
           .optional()
