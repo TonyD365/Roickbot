@@ -5,6 +5,8 @@ import { ConfirmStore } from "../safety/confirm.js";
 import type { Harness } from "../harness/harness.js";
 import type { EventBus } from "../bridge/events.js";
 
+const MAX_TOOL_RESULT_BYTES = 1_000_000;
+
 export interface ToolContext {
   /** 插件通道（编辑态工具）。 */
   queue: CommandQueue;
@@ -28,6 +30,17 @@ export interface ToolResult {
 /** 把任意 JSON 结果包成 MCP 文本响应。 */
 export function jsonResult(data: unknown): ToolResult {
   const text = typeof data === "string" ? data : JSON.stringify(data, null, 2);
+  if (Buffer.byteLength(text, "utf8") > MAX_TOOL_RESULT_BYTES) {
+    return {
+      content: [{
+        type: "text",
+        text:
+          "Error: Tool result exceeds the 1 MB response limit. Narrow the path, reduce the limit/depth, " +
+          "or use pagination before trying again.",
+      }],
+      isError: true,
+    };
+  }
   return { content: [{ type: "text", text }] };
 }
 

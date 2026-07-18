@@ -4,6 +4,17 @@ local Safety = require(script.Parent.Parent.Safety)
 local Properties = require(script.Parent.properties)
 
 local M = {}
+local DEFAULT_TREE_NODES = 500
+local MAX_TREE_NODES = 2_000
+local DEFAULT_CHILDREN_LIMIT = 200
+local MAX_CHILDREN_LIMIT = 500
+local DEFAULT_ELEMENTS_LIMIT = 100
+local MAX_ELEMENTS_LIMIT = 250
+
+local function bounded(value: any, fallback: number, maximum: number): number
+	local n = tonumber(value) or fallback
+	return math.clamp(math.floor(n), 1, maximum)
+end
 
 local function isExcluded(inst: Instance, exclude: { string }?): boolean
 	if not exclude then
@@ -47,8 +58,8 @@ function M.get_tree(args: any)
 	if root ~= game then
 		Safety.assertReadable(root)
 	end
-	local maxDepth = args.maxDepth or 3
-	local ctr = { n = 0, max = args.maxNodes or math.huge, hit = false }
+	local maxDepth = bounded(args.maxDepth, 3, 8)
+	local ctr = { n = 0, max = bounded(args.maxNodes, DEFAULT_TREE_NODES, MAX_TREE_NODES), hit = false }
 	local tree = nodeOf(root, 0, maxDepth, args.classWhitelist, args.excludeClassWhitelist, ctr)
 	return { root = tree, nodeCount = ctr.n, truncated = ctr.hit }
 end
@@ -56,29 +67,64 @@ end
 function M.get_children(args: any)
 	local inst = Safety.resolveOrFail(args.path)
 	Safety.assertReadable(inst)
+	local limit = bounded(args.limit, DEFAULT_CHILDREN_LIMIT, MAX_CHILDREN_LIMIT)
+	local cursor = math.max(tonumber(args.cursor) or 0, 0)
 	local list = {}
+	local seen = 0
+	local truncated = false
 	for _, c in ipairs(inst:GetChildren()) do
+		seen += 1
+		if seen <= cursor then
+			continue
+		end
 		table.insert(list, {
 			name = c.Name,
 			className = c.ClassName,
 			path = Safety.pathOf(c),
 			childCount = #c:GetChildren(),
 		})
+		if #list >= limit then
+			truncated = seen < #inst:GetChildren()
+			break
+		end
 	end
-	return list
+	local result: { [string]: any } = { count = #list, children = list, truncated = truncated }
+	if truncated then
+		result.nextCursor = cursor + #list
+	end
+	return result
 end
 
 function M.view_elements(args: any)
+	local limit = bounded(args.limit, DEFAULT_ELEMENTS_LIMIT, MAX_ELEMENTS_LIMIT)
+	local cursor = math.max(tonumber(args.cursor) or 0, 0)
 	local targets: { Instance } = {}
+	local seen = 0
+	local truncated = false
 	if args.paths then
 		for _, p in ipairs(args.paths) do
+			seen += 1
+			if seen <= cursor then
+				continue
+			end
 			table.insert(targets, Safety.resolveOrFail(p))
+			if #targets >= limit then
+				truncated = seen < #args.paths
+				break
+			end
 		end
 	elseif args.classNameFilter then
 		local root: Instance = if args.rootPath then Safety.resolveOrFail(args.rootPath) else game
 		for _, d in ipairs(root:GetDescendants()) do
 			if d.ClassName == args.classNameFilter or d:IsA(args.classNameFilter) then
-				table.insert(targets, d)
+				seen += 1
+				if seen > cursor then
+					table.insert(targets, d)
+					if #targets >= limit then
+						truncated = true
+						break
+					end
+				end
 			end
 		end
 	else
@@ -100,7 +146,11 @@ function M.view_elements(args: any)
 			table.insert(out, info)
 		end
 	end
-	return { count = #out, elements = out }
+	local result: { [string]: any } = { count = #out, elements = out, truncated = truncated }
+	if truncated then
+		result.nextCursor = cursor + #out
+	end
+	return result
 end
 
 return M

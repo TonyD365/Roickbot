@@ -12,7 +12,7 @@ local TYPE_NAMES: { [Enum.MessageType]: string } = {
 }
 
 function M.get_console_output(args: any)
-	local count = (args and args.count) or 100
+	local count = math.clamp(math.floor(tonumber(args and args.count) or 100), 1, 500)
 	local filter = args and args.includeTypes -- 形如 {"Error","Warning"}
 	local order = (args and args.order) or "newest" -- 默认最新在前（调试最常用）。
 
